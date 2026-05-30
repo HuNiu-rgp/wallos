@@ -1,0 +1,17 @@
+{
+    "Account created.": "Account created.",
+    "Account updated.": "Account updated.",
+    "Account deleted.": "Account deleted.",
+    "Accounts with transactions cannot be deleted.": "Accounts with transactions cannot be deleted.",
+    "Category created.": "Category created.",
+    "Category updated.": "Category updated.",
+    "Category deleted.": "Category deleted.",
+    "A category cannot be its own parent.": "A category cannot be its own parent.",
+    "Categories in use cannot be deleted.": "Categories in use cannot be deleted.",
+    "Subscription created.": "Subscription created.",
+    "Subscription updated.": "Subscription updated.",
+    "Subscription deleted.": "Subscription deleted.",
+    "Transaction created.": "Transaction created.",
+    "Transaction updated.": "Transaction updated.",
+    "Transaction deleted.": "Transaction deleted."
+}

@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+    .dark input,
+    .dark select,
+    .dark textarea {
+        @apply border-gray-700 bg-gray-950 text-gray-100 placeholder:text-gray-500;
+    }
+}

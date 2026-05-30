@@ -1,0 +1,17 @@
+{
+    "Account created.": "账户已创建。",
+    "Account updated.": "账户已更新。",
+    "Account deleted.": "账户已删除。",
+    "Accounts with transactions cannot be deleted.": "已有交易的账户不能删除。",
+    "Category created.": "分类已创建。",
+    "Category updated.": "分类已更新。",
+    "Category deleted.": "分类已删除。",
+    "A category cannot be its own parent.": "分类不能选择自己作为父级。",
+    "Categories in use cannot be deleted.": "正在使用的分类不能删除。",
+    "Subscription created.": "订阅已创建。",
+    "Subscription updated.": "订阅已更新。",
+    "Subscription deleted.": "订阅已删除。",
+    "Transaction created.": "交易已创建。",
+    "Transaction updated.": "交易已更新。",
+    "Transaction deleted.": "交易已删除."
+}

@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+    command: >
+      sh -c "composer install
+      && mkdir -p database
+      && touch database/database.sqlite
+      && php artisan key:generate --force
+      && php artisan storage:link --force
+      && php artisan migrate --seed --force
+      && php artisan serve --host=0.0.0.0 --port=8000"
+    ports:
+      - "8001:8000"
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database.sqlite
+
+  vite:
+    build:
+      context: .
+    command: sh -c "npm install && npm run dev -- --host=0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - app
+
+  scheduler:
+    build:
+      context: .
+    command: php artisan schedule:work
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database.sqlite
+    depends_on:
+      - app
