@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AppIcon from '@/Components/AppIcon.vue';
 import Dropdown from '@/Components/Dropdown.vue';
@@ -7,11 +7,27 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { message } from 'ant-design-vue';
 import { useI18n } from '@/i18n';
 
 const showingNavigationDropdown = ref(false);
 const { currentLocale, setLocale, t } = useI18n();
+const page = usePage();
+
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.success) {
+            message.success(flash.success);
+        }
+
+        if (flash?.error) {
+            message.error(flash.error);
+        }
+    },
+    { deep: true, immediate: true },
+);
 
 const navItems = [
     ['dashboard', 'dashboard'],
@@ -258,29 +274,12 @@ const navItems = [
                 </div>
             </nav>
 
-            <div
-                v-if="$page.props.flash?.success"
-                class="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8"
-            >
-                <div class="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                    {{ $page.props.flash.success }}
-                </div>
-            </div>
-            <div
-                v-if="$page.props.flash?.error"
-                class="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8"
-            >
-                <div class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                    {{ $page.props.flash.error }}
-                </div>
-            </div>
-
             <!-- Page Heading -->
             <header
                 class="bg-white shadow transition-colors dark:bg-gray-900 dark:shadow-gray-950"
                 v-if="$slots.header"
             >
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
                     <slot name="header" />
                 </div>
             </header>

@@ -14,7 +14,7 @@ const { t } = useI18n();
     <Head :title="t('appName')" />
 
     <main class="min-h-screen bg-gray-50 text-gray-900">
-        <header class="mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
+        <header class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
             <div class="flex items-center gap-2 text-lg font-semibold">
                 <img v-if="$page.props.site.logoUrl" :src="$page.props.site.logoUrl" alt="" class="h-8 w-8 rounded object-contain" />
                 {{ $page.props.site.name }}

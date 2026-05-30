@@ -136,7 +136,7 @@ function dateValue(value) {
 
         <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
             <form class="w-full max-w-lg rounded-lg border bg-white p-5 text-gray-900 shadow-2xl dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100" @submit.prevent="submit">
-                <div class="flex items-center justify-between border-b border-gray-200 pb-4 dark:border-gray-800">
+                <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
                     <h3 class="text-lg font-semibold">{{ editing ? t('editUser') : t('createUser') }}</h3>
                     <button type="button" class="text-3xl leading-none text-gray-400 hover:text-gray-700 dark:hover:text-gray-100" @click="showModal = false">&times;</button>
                 </div>

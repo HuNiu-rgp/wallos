@@ -120,12 +120,13 @@ class SubscriptionNotificationService
     private function message(Subscription $subscription, int $daysUntilPayment): string
     {
         return implode("\n", [
-            'Subscription reminder',
-            'Name: '.$subscription->name,
-            'Price: '.$this->price($subscription),
-            'Next payment: '.$subscription->next_due_on->format('Y-m-d'),
-            'Days until payment: '.$daysUntilPayment,
-            'URL: '.($subscription->link_url ?: '-'),
+            '订阅到期提醒',
+            '订阅名称：'.$subscription->name,
+            '金额：'.$this->price($subscription),
+            '付款人：'.($subscription->payer_name ?: '-'),
+            '下次支付日期：'.$subscription->next_due_on->format('Y-m-d'),
+            '距离付款：'.$daysUntilPayment.' 天',
+            '续费链接：'.($subscription->link_url ?: '-'),
         ]);
     }
 
@@ -135,7 +136,7 @@ class SubscriptionNotificationService
             'subscription_name' => $subscription->name,
             'subscription_price' => $this->price($subscription),
             'subscription_currency' => $subscription->currency,
-            'subscription_category' => $subscription->category?->name ?? 'No category',
+            'subscription_category' => $subscription->category?->name ?? '未分类',
             'subscription_date' => $subscription->next_due_on->format('Y-m-d'),
             'subscription_payer' => $subscription->payer_name ?? '',
             'subscription_days_until_payment' => (string) $daysUntilPayment,

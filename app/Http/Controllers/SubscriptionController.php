@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Subscription;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -147,6 +149,27 @@ class SubscriptionController extends Controller
         return response()->streamDownload(function () use ($subscriptions): void {
             echo json_encode($subscriptions, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }, 'subscriptions.json', ['Content-Type' => 'application/json; charset=UTF-8']);
+    }
+
+    public function fetchLogo(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'url' => ['required', 'url:http,https', 'max:2048'],
+        ]);
+        $url = $validated['url'];
+
+        if (! $this->isPublicUrl($url)) {
+            throw ValidationException::withMessages(['url' => __('The website URL must point to a public address.')]);
+        }
+
+        [$html, $finalUrl] = $this->fetchWebsite($url);
+        $logoUrl = $this->extractLogoUrl($html, $finalUrl);
+
+        if (! $logoUrl || ! $this->isPublicUrl($logoUrl)) {
+            throw ValidationException::withMessages(['url' => __('No public website icon was found in the page head.')]);
+        }
+
+        return response()->json(['logo_url' => $logoUrl]);
     }
 
     private function validateSubscription(Request $request): array
@@ -301,5 +324,109 @@ class SubscriptionController extends Controller
         }
 
         return ! preg_match('/<(script|foreignObject|iframe|object|embed|link|style)\b|on[a-z]+\s*=|javascript:|data:text\/html|(href|src)\s*=\s*["\']\s*https?:\/\//i', $value);
+    }
+
+    private function extractLogoUrl(string $html, string $pageUrl): ?string
+    {
+        $document = new \DOMDocument;
+
+        if (! @$document->loadHTML($html, LIBXML_NOERROR | LIBXML_NOWARNING)) {
+            return null;
+        }
+
+        $xpath = new \DOMXPath($document);
+        $icons = $xpath->query('//head/link[contains(concat(" ", translate(normalize-space(@rel), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), " "), " icon ")]');
+
+        foreach ($icons ?: [] as $icon) {
+            $href = trim($icon->getAttribute('href'));
+
+            if ($href !== '') {
+                return $this->absoluteUrl($pageUrl, $href);
+            }
+        }
+
+        return null;
+    }
+
+    private function fetchWebsite(string $url): array
+    {
+        for ($redirects = 0; $redirects <= 5; $redirects++) {
+            if (! $this->isPublicUrl($url)) {
+                throw ValidationException::withMessages(['url' => __('The website URL must point to a public address.')]);
+            }
+
+            $response = Http::timeout(8)
+                ->withOptions(['allow_redirects' => false])
+                ->withHeaders([
+                    'Accept' => 'text/html,application/xhtml+xml',
+                    'User-Agent' => 'Mozilla/5.0 Wallos Logo Fetcher',
+                ])
+                ->get($url);
+
+            if ($response->successful()) {
+                return [$response->body(), $url];
+            }
+
+            if ($response->redirect() && $response->header('Location')) {
+                $url = $this->absoluteUrl($url, $response->header('Location'));
+
+                if ($url) {
+                    continue;
+                }
+            }
+
+            throw ValidationException::withMessages(['url' => __('Unable to read the website.')]);
+        }
+
+        throw ValidationException::withMessages(['url' => __('The website redirected too many times.')]);
+    }
+
+    private function absoluteUrl(string $pageUrl, string $href): ?string
+    {
+        if (preg_match('#^https?://#i', $href)) {
+            return $href;
+        }
+
+        $page = parse_url($pageUrl);
+
+        if (! isset($page['scheme'], $page['host'])) {
+            return null;
+        }
+
+        if (str_starts_with($href, '//')) {
+            return $page['scheme'].':'.$href;
+        }
+
+        $origin = $page['scheme'].'://'.$page['host'].(isset($page['port']) ? ':'.$page['port'] : '');
+        $path = str_starts_with($href, '/')
+            ? $href
+            : preg_replace('#/[^/]*$#', '/', $page['path'] ?? '/').$href;
+
+        return $origin.$path;
+    }
+
+    private function isPublicUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        if (! isset($parts['scheme'], $parts['host'])
+            || ! in_array(strtolower($parts['scheme']), ['http', 'https'], true)
+            || isset($parts['user'])
+            || isset($parts['pass'])) {
+            return false;
+        }
+
+        $addresses = filter_var($parts['host'], FILTER_VALIDATE_IP)
+            ? [$parts['host']]
+            : array_values(array_unique([
+                ...array_map(fn (array $record): string => $record['ip'], dns_get_record($parts['host'], DNS_A) ?: []),
+                ...array_map(fn (array $record): string => $record['ipv6'], dns_get_record($parts['host'], DNS_AAAA) ?: []),
+            ]));
+
+        return $addresses !== [] && collect($addresses)->every(fn (string $address): bool => filter_var(
+            $address,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        ) !== false);
     }
 }

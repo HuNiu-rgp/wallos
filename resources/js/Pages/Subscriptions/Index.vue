@@ -4,18 +4,26 @@ import AppIcon from '@/Components/AppIcon.vue';
 import InputError from '@/Components/InputError.vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { centsToAmount, money, useI18n } from '@/i18n';
+import { useTheme } from '@/theme';
+import { CalculatorOutlined, DeleteOutlined, EditOutlined, LinkOutlined, ReloadOutlined } from '@ant-design/icons-vue';
+import { Alert, Button, ConfigProvider, DatePicker, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Textarea, Tooltip, theme as antTheme } from 'ant-design-vue';
+import enUS from 'ant-design-vue/es/locale/en_US';
+import zhCN from 'ant-design-vue/es/locale/zh_CN';
 import { computed, ref } from 'vue';
+import 'ant-design-vue/dist/reset.css';
 
 const props = defineProps({
     subscriptions: Array,
     categories: Array,
 });
 
-const { t } = useI18n();
+const { currentLocale, t } = useI18n();
+const { isDark } = useTheme();
 const page = usePage();
 const editing = ref(null);
 const showModal = ref(false);
 const logoPreview = ref(null);
+const fetchingLogo = ref(false);
 const search = ref('');
 const statusFilter = ref('all');
 const categoryFilter = ref('all');
@@ -40,6 +48,19 @@ const currencies = [
 const cycles = ['day', 'week', 'month', 'year'];
 const paymentMethods = ['PayPal', 'Credit Card', 'Bank Transfer', 'Apple Pay', 'Google Pay', 'Cash', 'Other'];
 const notificationOptions = Array.from({ length: 16 }, (_, index) => index + 1);
+const currencyOptions = currencies.map(([value, label]) => ({ value, label: `${value} - ${label}` }));
+const intervalOptions = Array.from({ length: 24 }, (_, index) => ({ value: index + 1, label: String(index + 1) }));
+const cycleOptions = computed(() => cycles.map((value) => ({ value, label: t(value) })));
+const paymentMethodOptions = paymentMethods.map((value) => ({ value, label: value }));
+const categoryOptions = computed(() => [
+    { value: '', label: t('noCategory') },
+    ...props.categories.map((category) => ({ value: category.id, label: category.name })),
+]);
+const notificationLeadTimeOptions = computed(() => [
+    { value: '', label: t('defaultFromSettings') },
+    { value: 0, label: t('dueDate') },
+    ...notificationOptions.map((day) => ({ value: day, label: `${day} ${t('daysSuffix')}` })),
+]);
 
 const form = useForm({
     _method: '',
@@ -66,6 +87,14 @@ const form = useForm({
 });
 
 const modalTitle = computed(() => (editing.value ? t('edit') : t('createSubscription')));
+const antLocale = computed(() => (currentLocale.value === 'zh' ? zhCN : enUS));
+const antThemeConfig = computed(() => ({
+    algorithm: isDark.value ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+    token: {
+        borderRadius: 6,
+        colorPrimary: '#4f46e5',
+    },
+}));
 const filteredSubscriptions = computed(() => {
     const keyword = search.value.trim().toLowerCase();
 
@@ -223,6 +252,27 @@ function previewLogo() {
     logoPreview.value = logoPreviewUrl(form.logo_url);
 }
 
+async function fetchLogoFromLink() {
+    if (!form.link_url || fetchingLogo.value) return;
+
+    fetchingLogo.value = true;
+    form.clearErrors('link_url');
+
+    try {
+        const response = await window.axios.post(route('subscriptions.fetch-logo'), {
+            url: form.link_url,
+        });
+
+        form.logo_url = response.data.logo_url;
+        form.remove_logo = false;
+        logoPreview.value = logoPreviewUrl(form.logo_url);
+    } catch (error) {
+        form.setError('link_url', error.response?.data?.errors?.url?.[0] || t('fetchLogoFailed'));
+    } finally {
+        fetchingLogo.value = false;
+    }
+}
+
 function logoPreviewUrl(value) {
     const input = value.trim();
 
@@ -270,9 +320,7 @@ function submit() {
 }
 
 function destroy(item) {
-    if (window.confirm(t('confirmDelete'))) {
-        router.delete(route('subscriptions.destroy', item.id));
-    }
+    router.delete(route('subscriptions.destroy', item.id));
 }
 
 function openImport() {
@@ -405,12 +453,28 @@ function importSubscriptions(event) {
                                         </div>
                                         <span v-else>{{ t('noCategory') }}</span>
                                     </td>
-                                    <td class="space-x-3 px-5 py-4 text-right">
-                                        <a v-if="isRenewalDue(item.next_due_on) && renewalUrl(item.link_url)" :href="renewalUrl(item.link_url)" target="_blank" rel="noopener noreferrer" class="text-emerald-700 dark:text-emerald-300">
-                                            {{ t('renew') }}
-                                        </a>
-                                        <button class="text-indigo-700" @click="edit(item)">{{ t('edit') }}</button>
-                                        <button class="text-rose-700" @click="destroy(item)">{{ t('delete') }}</button>
+                                    <td class="px-5 py-4 text-right">
+                                        <ConfigProvider :theme="antThemeConfig">
+                                            <Space :size="4">
+                                                <Tooltip v-if="isRenewalDue(item.next_due_on) && renewalUrl(item.link_url)" :title="t('renew')">
+                                                    <Button type="text" :aria-label="t('renew')" :href="renewalUrl(item.link_url)" target="_blank" class="text-emerald-700 dark:text-emerald-300">
+                                                        <template #icon><LinkOutlined /></template>
+                                                    </Button>
+                                                </Tooltip>
+                                                <Tooltip :title="t('edit')">
+                                                    <Button type="text" :aria-label="t('edit')" class="text-indigo-700 dark:text-indigo-300" @click="edit(item)">
+                                                        <template #icon><EditOutlined /></template>
+                                                    </Button>
+                                                </Tooltip>
+                                                <Popconfirm :title="t('confirmDelete')" :ok-text="t('delete')" :cancel-text="t('cancel')" @confirm="destroy(item)">
+                                                    <Tooltip :title="t('delete')">
+                                                        <Button type="text" danger :aria-label="t('delete')">
+                                                            <template #icon><DeleteOutlined /></template>
+                                                        </Button>
+                                                    </Tooltip>
+                                                </Popconfirm>
+                                            </Space>
+                                        </ConfigProvider>
                                     </td>
                                 </tr>
                             </tbody>
@@ -420,153 +484,133 @@ function importSubscriptions(event) {
             </div>
         </div>
 
-        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
-            <form class="max-h-[92vh] w-full max-w-[790px] overflow-y-auto rounded-lg border bg-white p-5 text-gray-900 shadow-2xl dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100" @submit.prevent="submit">
-                <div class="flex items-center justify-between border-b border-gray-200 pb-4 dark:border-gray-800">
-                    <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ modalTitle }}</h3>
-                    <button type="button" class="text-3xl leading-none text-gray-400 hover:text-gray-700 dark:hover:text-gray-100" @click="showModal = false">&times;</button>
-                </div>
+        <ConfigProvider :locale="antLocale" :theme="antThemeConfig">
+            <Modal v-model:open="showModal" :title="modalTitle" :footer="null" :width="790" :body-style="{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }">
+                <form @submit.prevent="submit">
+                    <div class="grid gap-5">
+                        <Alert v-if="form.hasErrors" type="error" show-icon>
+                            <template #message>
+                                <div v-for="(message, field) in form.errors" :key="field">{{ message }}</div>
+                            </template>
+                        </Alert>
 
-                <div class="mt-5 grid gap-5">
-                    <div v-if="form.hasErrors" class="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                        <div v-for="(message, field) in form.errors" :key="field">{{ message }}</div>
-                    </div>
-
-                    <div class="grid gap-5 md:grid-cols-[1fr_270px] md:items-start">
-                        <label class="block">
-                            <input v-model="form.name" :placeholder="t('name')" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-indigo-500" />
-                            <InputError :message="form.errors.name" class="mt-1" />
-                        </label>
-                        <div class="flex items-start gap-3">
-                            <label class="min-w-0 flex-1">
-                                <input
-                                    v-model="form.logo_url"
-                                    :placeholder="t('logoUrl')"
-                                    class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-indigo-500"
-                                    @blur="previewLogo"
-                                    @input="form.remove_logo = false"
-                                />
-                                <InputError :message="form.errors.logo_url" class="mt-1" />
+                        <div class="grid gap-5 md:grid-cols-[1fr_270px] md:items-start">
+                            <label class="block">
+                                <Input v-model:value="form.name" :placeholder="t('name')" size="large" />
+                                <InputError :message="form.errors.name" class="mt-1" />
                             </label>
-                            <button type="button" class="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 text-gray-400" @click="clearLogo">
-                                <img v-if="logoPreview" :src="logoPreview" :alt="t('logoPreview')" class="h-full w-full rounded-md object-cover" />
-                                <span v-else class="text-xl">◌</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <label>
-                            <input v-model="form.amount" type="number" min="0" step="0.01" :placeholder="t('amount')" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-indigo-500" />
-                            <InputError :message="form.errors.amount" class="mt-1" />
-                        </label>
-                        <label>
-                            <select v-model="form.currency" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option v-for="[code, label] in currencies" :key="code" :value="code">{{ code }} - {{ label }}</option>
-                            </select>
-                            <InputError :message="form.errors.currency" class="mt-1" />
-                        </label>
-                    </div>
-
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <div class="mb-2 font-semibold text-gray-800">{{ t('paymentFrequency') }}</div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <select v-model="form.billing_interval" class="h-12 rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    <option v-for="number in 24" :key="number" :value="number">{{ number }}</option>
-                                </select>
-                                <select v-model="form.billing_cycle" class="h-12 rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    <option v-for="cycle in cycles" :key="cycle" :value="cycle">{{ t(cycle) }}</option>
-                                </select>
+                            <div class="flex items-start gap-3">
+                                <label class="min-w-0 flex-1">
+                                    <Input v-model:value="form.logo_url" :placeholder="t('logoUrl')" size="large" @blur="previewLogo" @input="form.remove_logo = false" />
+                                    <InputError :message="form.errors.logo_url" class="mt-1" />
+                                </label>
+                                <Tooltip :title="t('logoPreview')">
+                                    <Button type="dashed" size="large" class="h-10 w-10 p-0" @click="clearLogo">
+                                        <img v-if="logoPreview" :src="logoPreview" :alt="t('logoPreview')" class="h-full w-full rounded object-cover" />
+                                        <span v-else>◌</span>
+                                    </Button>
+                                </Tooltip>
                             </div>
                         </div>
-                        <div>
-                            <div class="mb-2 font-semibold text-gray-800">{{ t('autoRenew') }}</div>
-                            <label class="flex h-12 items-center gap-3">
-                                <button type="button" class="relative h-7 w-12 rounded-full transition" :class="form.auto_renew ? 'bg-indigo-600' : 'bg-gray-300'" @click="form.auto_renew = !form.auto_renew">
-                                    <span class="absolute top-1 h-5 w-5 rounded-full bg-white transition" :class="form.auto_renew ? 'left-6' : 'left-1'"></span>
-                                </button>
-                                <span>{{ t('autoRenew') }}</span>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label>
+                                <InputNumber v-model:value="form.amount" :min="0" :step="0.01" :placeholder="t('amount')" size="large" class="w-full" />
+                                <InputError :message="form.errors.amount" class="mt-1" />
+                            </label>
+                            <label>
+                                <Select v-model:value="form.currency" :options="currencyOptions" size="large" class="w-full" />
+                                <InputError :message="form.errors.currency" class="mt-1" />
                             </label>
                         </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <div class="mb-2 font-semibold">{{ t('paymentFrequency') }}</div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <Select v-model:value="form.billing_interval" :options="intervalOptions" size="large" />
+                                    <Select v-model:value="form.billing_cycle" :options="cycleOptions" size="large" />
+                                </div>
+                            </div>
+                            <div>
+                                <div class="mb-2 font-semibold">{{ t('autoRenew') }}</div>
+                                <label class="flex h-10 items-center gap-3">
+                                    <Switch v-model:checked="form.auto_renew" />
+                                    <span>{{ t('autoRenew') }}</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-[1fr_52px_1fr] md:items-end">
+                            <label>
+                                <span class="mb-2 block font-semibold">{{ t('startDate') }}</span>
+                                <DatePicker v-model:value="form.start_on" value-format="YYYY-MM-DD" format="YYYY-MM-DD" size="large" class="w-full" />
+                            </label>
+                            <Tooltip :title="t('nextPaymentDate')">
+                                <Button size="large" class="w-full" @click="calculateNextPayment"><CalculatorOutlined /></Button>
+                            </Tooltip>
+                            <label>
+                                <span class="mb-2 block font-semibold">{{ t('nextPaymentDate') }}</span>
+                                <DatePicker v-model:value="form.next_due_on" value-format="YYYY-MM-DD" format="YYYY-MM-DD" size="large" class="w-full" />
+                                <InputError :message="form.errors.next_due_on" class="mt-1" />
+                            </label>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label>
+                                <span class="mb-2 block font-semibold">{{ t('paymentMethod') }}</span>
+                                <Select v-model:value="form.payment_method" :options="paymentMethodOptions" size="large" class="w-full" />
+                            </label>
+                            <label>
+                                <span class="mb-2 block font-semibold">{{ t('payer') }}</span>
+                                <Input v-model:value="form.payer_name" placeholder="Bob" size="large" />
+                            </label>
+                        </div>
+
+                        <label>
+                            <span class="mb-2 block font-semibold">{{ t('category') }}</span>
+                            <Select v-model:value="form.category_id" :options="categoryOptions" size="large" class="w-full" />
+                        </label>
+
+                        <label class="flex items-center gap-3 font-semibold">
+                            <Switch v-model:checked="form.notification_enabled" />
+                            <span>{{ t('enableNotifications') }}</span>
+                        </label>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label>
+                                <span class="mb-2 block font-semibold">{{ t('notificationLeadTime') }}</span>
+                                <Select v-model:value="form.notification_days_before" :options="notificationLeadTimeOptions" size="large" class="w-full" />
+                            </label>
+                            <label>
+                                <span class="mb-2 block font-semibold">{{ t('cancellationNotice') }}</span>
+                                <DatePicker v-model:value="form.cancellation_notice_on" value-format="YYYY-MM-DD" format="YYYY-MM-DD" size="large" class="w-full" />
+                            </label>
+                        </div>
+
+                        <div>
+                            <Space.Compact class="w-full">
+                                <Input v-model:value="form.link_url" :placeholder="t('link')" size="large" />
+                                <Tooltip :title="t('fetchLogoFromLink')">
+                                    <Button size="large" :loading="fetchingLogo" :disabled="!form.link_url" @click="fetchLogoFromLink"><ReloadOutlined /></Button>
+                                </Tooltip>
+                            </Space.Compact>
+                            <InputError :message="form.errors.link_url" class="mt-1" />
+                        </div>
+                        <Textarea v-model:value="form.notes" :rows="3" :placeholder="t('notes')" />
+
+                        <label class="flex items-center gap-3 font-semibold">
+                            <Switch :checked="!form.is_active" @change="form.is_active = !$event" />
+                            <span>{{ t('pauseSubscription') }}</span>
+                        </label>
                     </div>
 
-                    <div class="grid gap-4 md:grid-cols-[1fr_52px_1fr] md:items-end">
-                        <label>
-                            <span class="mb-2 block font-semibold text-gray-800">{{ t('startDate') }}</span>
-                            <input v-model="form.start_on" type="date" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                        </label>
-                        <button type="button" class="h-12 rounded-md border border-indigo-300 text-xl text-indigo-600 hover:bg-indigo-50" @click="calculateNextPayment">✣</button>
-                        <label>
-                            <span class="mb-2 block font-semibold text-gray-800">{{ t('nextPaymentDate') }}</span>
-                            <input v-model="form.next_due_on" type="date" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                            <InputError :message="form.errors.next_due_on" class="mt-1" />
-                        </label>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <Button size="large" @click="showModal = false">{{ t('cancel') }}</Button>
+                        <Button type="primary" html-type="submit" size="large" :loading="form.processing">{{ t('save') }}</Button>
                     </div>
-
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <label>
-                            <span class="mb-2 block font-semibold text-gray-800">{{ t('paymentMethod') }}</span>
-                            <select v-model="form.payment_method" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option v-for="method in paymentMethods" :key="method" :value="method">{{ method }}</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span class="mb-2 block font-semibold text-gray-800">{{ t('payer') }}</span>
-                            <input v-model="form.payer_name" placeholder="Bob" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-indigo-500" />
-                        </label>
-                    </div>
-
-                    <label>
-                        <span class="mb-2 block font-semibold text-gray-800">{{ t('category') }}</span>
-                        <select v-model="form.category_id" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            <option value="">{{ t('noCategory') }}</option>
-                            <option v-for="category in props.categories" :key="category.id" :value="category.id">{{ category.name }}</option>
-                        </select>
-                    </label>
-
-                    <label class="flex items-center gap-3 font-semibold text-gray-800">
-                        <button type="button" class="relative h-7 w-12 rounded-full transition" :class="form.notification_enabled ? 'bg-indigo-600' : 'bg-gray-300'" @click="form.notification_enabled = !form.notification_enabled">
-                            <span class="absolute top-1 h-5 w-5 rounded-full bg-white transition" :class="form.notification_enabled ? 'left-6' : 'left-1'"></span>
-                        </button>
-                        <span>{{ t('enableNotifications') }}</span>
-                    </label>
-
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <label>
-                            <span class="mb-2 block font-semibold text-gray-800">{{ t('notificationLeadTime') }}</span>
-                            <select v-model="form.notification_days_before" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">{{ t('defaultFromSettings') }}</option>
-                                <option value="0">{{ t('dueDate') }}</option>
-                                <option v-for="day in notificationOptions" :key="day" :value="day">{{ day }} {{ t('daysSuffix') }}</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span class="mb-2 block font-semibold text-gray-800">{{ t('cancellationNotice') }}</span>
-                            <input v-model="form.cancellation_notice_on" type="date" class="h-12 w-full rounded-md border-gray-300 px-4 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                        </label>
-                    </div>
-
-                    <input v-model="form.link_url" :placeholder="t('link')" class="h-12 rounded-md border-gray-300 px-4 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-indigo-500" />
-                    <textarea v-model="form.notes" rows="3" :placeholder="t('notes')" class="rounded-md border-gray-300 px-4 py-3 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-indigo-500"></textarea>
-
-                    <label class="flex items-center gap-3 font-semibold text-gray-800">
-                        <button type="button" class="relative h-7 w-12 rounded-full transition" :class="!form.is_active ? 'bg-indigo-600' : 'bg-gray-300'" @click="form.is_active = !form.is_active">
-                            <span class="absolute top-1 h-5 w-5 rounded-full bg-white transition" :class="!form.is_active ? 'left-6' : 'left-1'"></span>
-                        </button>
-                        <span>{{ t('pauseSubscription') }}</span>
-                    </label>
-                </div>
-
-                <div class="mt-6 flex justify-end gap-4">
-                    <button type="button" class="rounded-md border border-gray-300 bg-white px-8 py-3 font-semibold text-gray-700 hover:bg-gray-50" @click="showModal = false">
-                        {{ t('cancel') }}
-                    </button>
-                    <button class="rounded-md bg-indigo-600 px-8 py-3 font-semibold text-white hover:bg-indigo-500" :disabled="form.processing">
-                        {{ t('save') }}
-                    </button>
-                </div>
-            </form>
-        </div>
+                </form>
+            </Modal>
+        </ConfigProvider>
     </AuthenticatedLayout>
 </template>

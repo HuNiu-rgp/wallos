@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::post('/subscriptions/import', [SubscriptionController::class, 'import'])->name('subscriptions.import');
     Route::get('/subscriptions/export', [SubscriptionController::class, 'export'])->name('subscriptions.export');
+    Route::post('/subscriptions/fetch-logo', [SubscriptionController::class, 'fetchLogo'])->name('subscriptions.fetch-logo');
     Route::resource('subscriptions', SubscriptionController::class)->only(['index', 'store', 'update', 'destroy']);
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

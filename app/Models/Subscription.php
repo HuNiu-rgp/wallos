@@ -41,14 +41,14 @@ class Subscription extends Model
         return [
             'amount_cents' => 'integer',
             'billing_interval' => 'integer',
-            'start_on' => 'date',
-            'next_due_on' => 'date',
-            'last_charged_on' => 'date',
+            'start_on' => 'date:Y-m-d',
+            'next_due_on' => 'date:Y-m-d',
+            'last_charged_on' => 'date:Y-m-d',
             'auto_renew' => 'boolean',
             'reminder_days_before' => 'integer',
             'notification_enabled' => 'boolean',
             'notification_days_before' => 'integer',
-            'cancellation_notice_on' => 'date',
+            'cancellation_notice_on' => 'date:Y-m-d',
             'is_active' => 'boolean',
         ];
     }

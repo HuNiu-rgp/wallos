@@ -3,6 +3,7 @@
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 
 it('creates a subscription from the modal payload', function () {
     $user = User::factory()->create();
@@ -42,6 +43,10 @@ it('creates a subscription from the modal payload', function () {
         ->payment_method->toBe('PayPal')
         ->payer_name->toBe('Bob')
         ->notification_days_before->toBe(3);
+
+    expect(Subscription::first()->toArray())
+        ->start_on->toBe('2026-05-30')
+        ->next_due_on->toBe('2026-06-30');
 });
 
 it('imports and exports subscriptions using the wallos json format', function () {
@@ -137,4 +142,42 @@ it('rejects unsafe svg subscription logos', function () {
             'is_active' => 1,
         ])
         ->assertSessionHasErrors('logo_url');
+});
+
+it('fetches a subscription logo from the website head', function () {
+    Http::fake([
+        'https://93.184.216.34/account' => Http::response('', 302, ['Location' => 'https://93.184.216.34/login']),
+        'https://93.184.216.34/login' => Http::response('<html><head><link rel="shortcut icon" href="/assets/favicon.png"></head></html>'),
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->postJson(route('subscriptions.fetch-logo'), ['url' => 'https://93.184.216.34/account'])
+        ->assertOk()
+        ->assertJson([
+            'logo_url' => 'https://93.184.216.34/assets/favicon.png',
+        ]);
+});
+
+it('does not follow subscription logo redirects to private addresses', function () {
+    Http::fake([
+        'https://93.184.216.34/account' => Http::response('', 302, ['Location' => 'http://127.0.0.1/internal']),
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->postJson(route('subscriptions.fetch-logo'), ['url' => 'https://93.184.216.34/account'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('url');
+
+    Http::assertSentCount(1);
+});
+
+it('does not fetch subscription logos from private addresses', function () {
+    Http::fake();
+
+    $this->actingAs(User::factory()->create())
+        ->postJson(route('subscriptions.fetch-logo'), ['url' => 'http://127.0.0.1/internal'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('url');
+
+    Http::assertNothingSent();
 });

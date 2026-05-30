@@ -1,5 +1,6 @@
 <?php
 
+use App\Mail\SubscriptionReminder;
 use App\Models\Subscription;
 use App\Models\SubscriptionNotificationDelivery;
 use App\Models\SystemSetting;
@@ -22,11 +23,17 @@ it('sends enabled subscription reminder channels once per due date', function ()
     expect(Artisan::call('subscriptions:notify'))->toBe(0);
     expect(SubscriptionNotificationDelivery::query()->count())->toBe(3);
     Mail::assertSentCount(1);
+    Mail::assertSent(SubscriptionReminder::class, fn (SubscriptionReminder $mail) => $mail->envelope()->subject === $subscription->name.' 订阅到期提醒'
+        && str_contains($mail->reminderMessage, '订阅到期提醒')
+        && str_contains($mail->reminderMessage, '付款人：Bob'));
     Http::assertSentCount(2);
     Http::assertSent(fn (Request $request) => $request->url() === 'https://api.telegram.org/bottoken/sendMessage'
-        && $request['chat_id'] === '12345');
+        && $request['chat_id'] === '12345'
+        && str_contains($request['text'], '订阅到期提醒')
+        && str_contains($request['text'], '付款人：Bob'));
     Http::assertSent(fn (Request $request) => $request->url() === 'https://example.com/hooks/wallos'
         && $request['name'] === $subscription->name
+        && $request['payer'] === 'Bob'
         && $request['days'] === '3');
 
     expect(Artisan::call('subscriptions:notify'))->toBe(0);
@@ -59,6 +66,7 @@ function createNotifiableSubscription(array $attributes = []): Subscription
         'billing_interval' => 1,
         'billing_cycle' => 'month',
         'next_due_on' => now()->addDays(3)->toDateString(),
+        'payer_name' => 'Bob',
         'notification_enabled' => true,
         'notification_days_before' => 3,
         'is_active' => true,

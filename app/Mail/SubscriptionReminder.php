@@ -21,7 +21,7 @@ class SubscriptionReminder extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->subscription->name.' subscription reminder',
+            subject: $this->subscription->name.' 订阅到期提醒',
         );
     }
 
