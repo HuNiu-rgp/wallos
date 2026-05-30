@@ -78,6 +78,8 @@ SQLite 数据库、自动生成的应用密钥和存储文件都会保存在 Doc
 ```dotenv
 WALLOS_PORT=8001
 APP_URL=http://localhost:8001
+ASSET_URL=http://localhost:8001
+TRUSTED_PROXIES=*
 TZ=Asia/Shanghai
 ```
 
@@ -139,8 +141,10 @@ docker compose -f docker-compose.dev.yml up --build
 Docker Hub 提供适用于 `linux/amd64` 和 `linux/arm64` 的多平台镜像：
 
 ```bash
-docker pull gege188/wallos:v1.0.1
+docker pull gege188/wallos:v1.0.4
 ```
+
+生产镜像内置 Nginx 和 PHP-FPM，容器对外监听 `8000` 端口。
 
 [Docker Hub：gege188/wallos](https://hub.docker.com/r/gege188/wallos)
 

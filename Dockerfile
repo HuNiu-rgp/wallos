@@ -1,13 +1,15 @@
-FROM php:8.3-cli
+FROM php:8.3-fpm
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
+        nginx \
+        libsqlite3-dev \
         libzip-dev \
         sqlite3 \
         unzip \
-    && docker-php-ext-install zip \
+    && docker-php-ext-install pdo_sqlite zip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -21,19 +23,23 @@ WORKDIR /var/www/html
 
 COPY . .
 COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/wallos-entrypoint
+COPY docker/nginx.conf /etc/nginx/sites-available/default
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction \
     && npm ci \
     && npm run build \
     && rm -f public/hot \
     && rm -rf node_modules \
+    && printf '%s\n' 'clear_env = no' > /usr/local/etc/php-fpm.d/zz-wallos.conf \
     && mkdir -p \
         database \
         storage/app/public \
         storage/framework/cache/data \
         storage/framework/sessions \
         storage/framework/views \
-        storage/logs
+        storage/logs \
+        bootstrap/cache \
+        /run/nginx
 
 EXPOSE 8000
 

@@ -11,7 +11,9 @@ mkdir -p \
     storage/framework/cache/data \
     storage/framework/sessions \
     storage/framework/views \
-    storage/logs
+    storage/logs \
+    bootstrap/cache \
+    /run/nginx
 
 if [ ! -s database/.app-key ]; then
     php artisan key:generate --show --no-interaction > database/.app-key
@@ -33,8 +35,12 @@ if [ "$first_run" = "1" ]; then
     php artisan db:seed --force
 fi
 
+chown -R www-data:www-data database storage bootstrap/cache
+
 if [ "${1:-app}" != "app" ]; then
     exec "$@"
 fi
 
-exec php artisan serve --host=0.0.0.0 --port=8000
+php-fpm -D
+
+exec nginx -g 'daemon off;'
