@@ -3,6 +3,8 @@ set -eu
 
 cd /var/www/html
 
+rm -f public/hot
+
 mkdir -p \
     database \
     storage/app/public \

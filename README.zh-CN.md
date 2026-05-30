@@ -90,6 +90,15 @@ docker compose --env-file .env.docker pull
 docker compose --env-file .env.docker up -d
 ```
 
+### 故障排查
+
+如果页面仍然尝试从 `5173` 端口加载资源，请刷新生产容器：
+
+```bash
+docker compose --env-file .env.docker pull
+docker compose --env-file .env.docker up -d --force-recreate
+```
+
 ### 备份
 
 ```bash
@@ -130,7 +139,7 @@ docker compose -f docker-compose.dev.yml up --build
 Docker Hub 提供适用于 `linux/amd64` 和 `linux/arm64` 的多平台镜像：
 
 ```bash
-docker pull gege188/wallos:v1.0.0
+docker pull gege188/wallos:v1.0.1
 ```
 
 [Docker Hub：gege188/wallos](https://hub.docker.com/r/gege188/wallos)

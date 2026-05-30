@@ -25,6 +25,7 @@ COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/wallos-entrypoint
 RUN composer install --no-dev --optimize-autoloader --no-interaction \
     && npm ci \
     && npm run build \
+    && rm -f public/hot \
     && rm -rf node_modules \
     && mkdir -p \
         database \
