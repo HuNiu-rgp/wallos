@@ -41,7 +41,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction \
         bootstrap/cache \
         /run/nginx
 
-EXPOSE 8000
+EXPOSE 80
 
 ENTRYPOINT ["wallos-entrypoint"]
 CMD ["app"]
