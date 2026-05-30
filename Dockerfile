@@ -4,7 +4,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
-        git \
         libzip-dev \
         sqlite3 \
         unzip \
@@ -19,3 +18,23 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 WORKDIR /var/www/html
+
+COPY . .
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/wallos-entrypoint
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction \
+    && npm ci \
+    && npm run build \
+    && rm -rf node_modules \
+    && mkdir -p \
+        database \
+        storage/app/public \
+        storage/framework/cache/data \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs
+
+EXPOSE 8000
+
+ENTRYPOINT ["wallos-entrypoint"]
+CMD ["app"]

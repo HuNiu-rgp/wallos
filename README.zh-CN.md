@@ -50,6 +50,56 @@ Wallos 是一个开源的个人订阅追踪和财务管理工具。
 - Pest
 - Docker Compose
 
+## Docker 安装
+
+推荐使用 Docker Compose 安装。它会同时启动 Web 服务和订阅到期通知所需的定时任务。
+
+```bash
+mkdir wallos && cd wallos
+curl -fsSL https://raw.githubusercontent.com/HuNiu-rgp/wallos/main/docker-install.sh | sh
+docker compose --env-file .env.docker up -d
+```
+
+容器健康检查通过后，打开 http://localhost:8001。
+
+首次启动会创建 SQLite 数据库并导入默认管理员：
+
+- 邮箱：`admin@qq.com`
+- 密码：`123456`
+
+首次登录后请修改默认密码。
+
+SQLite 数据库、自动生成的应用密钥和存储文件都会保存在 Docker 数据卷中。重启或升级容器不会重置数据，也不会恢复管理员默认密码。
+
+### 配置
+
+如需修改端口、公开访问地址或时区，请编辑 `docker-compose.yml` 旁边的 `.env.docker`：
+
+```dotenv
+WALLOS_PORT=8001
+APP_URL=http://localhost:8001
+TZ=Asia/Shanghai
+```
+
+再次运行安装脚本会更新 `docker-compose.yml`，但不会覆盖已经存在的 `.env.docker`。
+
+### 升级
+
+```bash
+docker compose --env-file .env.docker pull
+docker compose --env-file .env.docker up -d
+```
+
+### 备份
+
+```bash
+docker run --rm \
+  -v wallos_wallos-data:/data/database:ro \
+  -v wallos_wallos-storage:/data/storage:ro \
+  -v "$PWD":/backup \
+  alpine tar czf /backup/wallos-backup.tar.gz -C /data .
+```
+
 ## 本地开发
 
 如果直接在本机运行，请准备 Node.js 20+ 和 PHP 8.2+。
@@ -66,21 +116,24 @@ npm run dev
 php artisan serve
 ```
 
-## Docker
+使用 Docker 进行源码开发：
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-打开 http://localhost:8001。
+应用运行在 http://localhost:8001，Vite 运行在 http://localhost:5173。
 
-Vite 运行在 http://localhost:5173。
+## Docker 镜像
 
-首次创建数据库时会导入默认管理员：
+Docker Hub 提供适用于 `linux/amd64` 和 `linux/arm64` 的多平台镜像：
 
-- 邮箱：`admin@qq.com`
-- 密码：`123456`
+```bash
+docker pull gege188/wallos:v1.0.0
+```
+
+[Docker Hub：gege188/wallos](https://hub.docker.com/r/gege188/wallos)
 
 ## 定时通知
 
