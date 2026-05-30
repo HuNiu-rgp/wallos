@@ -134,7 +134,7 @@ The app runs on http://localhost:8001 and Vite runs on http://localhost:5173.
 Prebuilt multi-platform images for `linux/amd64` and `linux/arm64` are published on Docker Hub:
 
 ```bash
-docker pull gege188/wallos:v1.0.5
+docker pull gege188/wallos:v1.0.6
 ```
 
 The production image runs Nginx on port `80` and PHP-FPM internally.

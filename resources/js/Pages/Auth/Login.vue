@@ -23,9 +23,12 @@ const form = useForm({
     remember: false,
 });
 const { t } = useI18n();
+const loginUrl = route('login', undefined, false);
+const passwordRequestUrl = route('password.request', undefined, false);
+const registerUrl = route('register', undefined, false);
 
 const submit = () => {
-    form.post(route('login'), {
+    form.post(loginUrl, {
         onFinish: () => form.reset('password'),
     });
 };
@@ -83,7 +86,7 @@ const submit = () => {
             <div class="mt-4 flex items-center justify-end">
                 <Link
                     v-if="canResetPassword"
-                    :href="route('password.request')"
+                    :href="passwordRequestUrl"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
                     {{ t('forgotPassword') }}
@@ -100,7 +103,7 @@ const submit = () => {
 
             <div v-if="$page.props.site.registrationEnabled" class="mt-5 border-t border-gray-200 pt-4 text-center dark:border-gray-800">
                 <Link
-                    :href="route('register')"
+                    :href="registerUrl"
                     class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
                 >
                     {{ t('createAccount') }}

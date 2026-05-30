@@ -8,6 +8,9 @@ defineProps({
 });
 
 const { t } = useI18n();
+const dashboardUrl = route('dashboard', undefined, false);
+const loginUrl = route('login', undefined, false);
+const registerUrl = route('register', undefined, false);
 </script>
 
 <template>
@@ -22,18 +25,18 @@ const { t } = useI18n();
             <nav v-if="canLogin" class="flex items-center gap-3 text-sm">
                 <Link
                     v-if="$page.props.auth.user"
-                    :href="route('dashboard')"
+                    :href="dashboardUrl"
                     class="rounded-md bg-gray-900 px-4 py-2 font-medium text-white"
                 >
                     {{ t('dashboard') }}
                 </Link>
                 <template v-else>
-                    <Link :href="route('login')" class="rounded-md border border-gray-300 px-4 py-2 font-medium">
+                    <Link :href="loginUrl" class="rounded-md border border-gray-300 px-4 py-2 font-medium">
                         {{ t('login') }}
                     </Link>
                     <Link
                         v-if="canRegister"
-                        :href="route('register')"
+                        :href="registerUrl"
                         class="rounded-md bg-gray-900 px-4 py-2 font-medium text-white"
                     >
                         {{ t('register') }}
@@ -54,13 +57,13 @@ const { t } = useI18n();
                 <div class="mt-8 flex flex-wrap gap-3">
                     <Link
                         v-if="canRegister && !$page.props.auth.user"
-                        :href="route('register')"
+                        :href="registerUrl"
                         class="rounded-md bg-gray-900 px-5 py-3 text-sm font-medium text-white"
                     >
                         {{ t('register') }}
                     </Link>
                     <Link
-                        :href="$page.props.auth.user ? route('dashboard') : route('login')"
+                        :href="$page.props.auth.user ? dashboardUrl : loginUrl"
                         class="rounded-md border border-gray-300 bg-white px-5 py-3 text-sm font-medium text-gray-800"
                     >
                         {{ $page.props.auth.user ? t('dashboard') : t('login') }}
