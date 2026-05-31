@@ -6,6 +6,7 @@ use App\Mail\SubscriptionReminder;
 use App\Models\Subscription;
 use App\Models\SubscriptionNotificationDelivery;
 use App\Models\SystemSetting;
+use App\Models\UserNotificationSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -17,25 +18,25 @@ class SubscriptionNotificationService
         $settings = SystemSetting::values();
         $timezone = $settings['timezone'] ?: config('app.timezone');
         $today = now($timezone)->startOfDay();
-        $channels = $this->enabledChannels($settings);
         $result = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
 
-        if ($channels === []) {
-            return $result;
-        }
-
         Subscription::query()
-            ->with('category:id,name')
+            ->with(['category:id,name', 'user.notificationSettings'])
             ->where('is_active', true)
             ->where('notification_enabled', true)
             ->whereDate('next_due_on', '>=', $today->toDateString())
             ->whereDate('next_due_on', '<=', $today->copy()->addDays(365)->toDateString())
             ->orderBy('next_due_on')
-            ->each(function (Subscription $subscription) use ($channels, $settings, $today, &$result): void {
+            ->each(function (Subscription $subscription) use ($settings, $today, &$result): void {
+                $notificationSettings = [
+                    ...UserNotificationSetting::valuesFor($subscription->user),
+                    'site_name' => $settings['site_name'],
+                ];
+                $channels = $this->enabledChannels($notificationSettings);
                 $daysUntilPayment = $today->diffInDays($subscription->next_due_on->copy()->startOfDay(), false);
                 $notificationDays = $subscription->notification_days_before ?? (int) $settings['default_notification_days'];
 
-                if ($daysUntilPayment > $notificationDays) {
+                if ($channels === [] || $daysUntilPayment > $notificationDays) {
                     return;
                 }
 
@@ -47,7 +48,7 @@ class SubscriptionNotificationService
                     }
 
                     try {
-                        $this->{'send'.ucfirst($channel)}($subscription, $settings, $daysUntilPayment);
+                        $this->{'send'.ucfirst($channel)}($subscription, $notificationSettings, $daysUntilPayment);
                         $this->recordDelivery($subscription, $channel);
                         $result['sent']++;
                     } catch (Throwable $exception) {

@@ -5,6 +5,7 @@ use App\Models\Subscription;
 use App\Models\SubscriptionNotificationDelivery;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Models\UserNotificationSetting;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +19,7 @@ it('sends enabled subscription reminder channels once per due date', function ()
     ]);
     $this->travelTo(now()->startOfDay());
     $subscription = createNotifiableSubscription(['next_due_on' => now()->addDays(3)->toDateString()]);
-    createNotificationSettings();
+    createNotificationSettings($subscription->user);
 
     expect(Artisan::call('subscriptions:notify'))->toBe(0);
     expect(SubscriptionNotificationDelivery::query()->count())->toBe(3);
@@ -45,8 +46,8 @@ it('sends enabled subscription reminder channels once per due date', function ()
 it('does not notify subscriptions before their reminder window', function () {
     Mail::fake();
     $this->travelTo(now()->startOfDay());
-    createNotifiableSubscription(['next_due_on' => now()->addDays(4)->toDateString()]);
-    createNotificationSettings([
+    $subscription = createNotifiableSubscription(['next_due_on' => now()->addDays(4)->toDateString()]);
+    createNotificationSettings($subscription->user, [
         'telegram_enabled' => '0',
         'webhook_enabled' => '0',
     ]);
@@ -54,6 +55,23 @@ it('does not notify subscriptions before their reminder window', function () {
     expect(Artisan::call('subscriptions:notify'))->toBe(0);
     expect(SubscriptionNotificationDelivery::query()->count())->toBe(0);
     Mail::assertNothingSent();
+});
+
+it('uses notification channels belonging to the subscription owner', function () {
+    Mail::fake();
+    $this->travelTo(now()->startOfDay());
+    $configuredUser = User::factory()->create();
+    $unconfiguredUser = User::factory()->create();
+    createNotifiableSubscription(['user_id' => $configuredUser->id]);
+    createNotifiableSubscription(['user_id' => $unconfiguredUser->id, 'name' => 'Other subscription']);
+    createNotificationSettings($configuredUser, [
+        'telegram_enabled' => '0',
+        'webhook_enabled' => '0',
+    ]);
+
+    expect(Artisan::call('subscriptions:notify'))->toBe(0);
+    expect(SubscriptionNotificationDelivery::query()->count())->toBe(1);
+    Mail::assertSentCount(1);
 });
 
 function createNotifiableSubscription(array $attributes = []): Subscription
@@ -74,10 +92,10 @@ function createNotifiableSubscription(array $attributes = []): Subscription
     ]);
 }
 
-function createNotificationSettings(array $overrides = []): void
+function createNotificationSettings(User $user, array $overrides = []): void
 {
     $settings = [
-        ...SystemSetting::defaults(),
+        ...UserNotificationSetting::defaults(),
         'smtp_enabled' => '1',
         'smtp_host' => 'smtp.example.com',
         'smtp_from_address' => 'mailer@example.com',
@@ -91,6 +109,9 @@ function createNotificationSettings(array $overrides = []): void
     ];
 
     foreach ($settings as $key => $value) {
-        SystemSetting::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+        UserNotificationSetting::query()->updateOrCreate(
+            ['user_id' => $user->id, 'key' => $key],
+            ['value' => $value],
+        );
     }
 }

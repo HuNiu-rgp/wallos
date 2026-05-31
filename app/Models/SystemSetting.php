@@ -21,39 +21,6 @@ class SystemSetting extends Model
             'default_currency' => 'CNY',
             'default_notification_days' => '3',
             'timezone' => 'Asia/Shanghai',
-            'smtp_enabled' => '0',
-            'smtp_host' => '',
-            'smtp_port' => '587',
-            'smtp_username' => '',
-            'smtp_password' => '',
-            'smtp_encryption' => 'tls',
-            'smtp_from_address' => '',
-            'smtp_from_name' => '',
-            'smtp_notification_email' => '',
-            'telegram_enabled' => '0',
-            'telegram_bot_token' => '',
-            'telegram_chat_id' => '',
-            'webhook_enabled' => '0',
-            'webhook_method' => 'POST',
-            'webhook_url' => '',
-            'webhook_headers' => '',
-            'webhook_payload' => <<<'JSON'
-{
-  "event": "subscription.reminder",
-  "name": "{{subscription_name}}",
-  "price": "{{subscription_price}}",
-  "currency": "{{subscription_currency}}",
-  "category": "{{subscription_category}}",
-  "date": "{{subscription_date}}",
-  "payer": "{{subscription_payer}}",
-  "days": "{{subscription_days_until_payment}}",
-  "notes": "{{subscription_notes}}",
-  "url": "{{subscription_url}}"
-}
-JSON,
-            'webhook_cancellation_payload' => '',
-            'webhook_ignore_ssl_errors' => '0',
-            'webhook_secret' => '',
         ];
     }
 

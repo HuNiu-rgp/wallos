@@ -130,13 +130,10 @@ const navItems = [
                                             {{ t('profile') }}
                                             </span>
                                         </DropdownLink>
-                                        <DropdownLink
-                                            v-if="$page.props.auth.isAdmin"
-                                            :href="route('settings.edit', undefined, false)"
-                                        >
+                                        <DropdownLink :href="route('settings.edit', undefined, false)">
                                             <span class="flex items-center gap-2">
                                                 <AppIcon name="settings" />
-                                                {{ t('systemSettings') }}
+                                                {{ t('settings') }}
                                             </span>
                                         </DropdownLink>
                                         <DropdownLink
@@ -254,8 +251,8 @@ const navItems = [
                             <ResponsiveNavLink :href="route('profile.edit', undefined, false)">
                                 <span class="flex items-center gap-2"><AppIcon name="user" />{{ t('profile') }}</span>
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink v-if="$page.props.auth.isAdmin" :href="route('settings.edit', undefined, false)">
-                                <span class="flex items-center gap-2"><AppIcon name="settings" />{{ t('systemSettings') }}</span>
+                            <ResponsiveNavLink :href="route('settings.edit', undefined, false)">
+                                <span class="flex items-center gap-2"><AppIcon name="settings" />{{ t('settings') }}</span>
                             </ResponsiveNavLink>
                             <ResponsiveNavLink v-if="$page.props.auth.isAdmin" :href="route('users.index', undefined, false)">
                                 <span class="flex items-center gap-2"><AppIcon name="users" />{{ t('userManagement') }}</span>

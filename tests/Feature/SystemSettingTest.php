@@ -2,6 +2,7 @@
 
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Models\UserNotificationSetting;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -50,16 +51,21 @@ it('allows a relative site logo path', function () {
     expect(SystemSetting::value('site_logo_url'))->toBe('/favicon.ico');
 });
 
-it('does not allow regular users to update system settings', function () {
+it('allows regular users to update only their notification settings', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->patch(route('settings.update'), [
-            ...SystemSetting::defaults(),
             'site_name' => 'Blocked',
-            'registration_enabled' => true,
+            'smtp_enabled' => true,
+            'telegram_enabled' => false,
+            'webhook_enabled' => false,
+            'webhook_method' => 'POST',
         ])
-        ->assertForbidden();
+        ->assertRedirect();
+
+    expect(SystemSetting::value('site_name'))->toBe('Wallos');
+    expect(UserNotificationSetting::valuesFor($user)['smtp_enabled'])->toBe('1');
 });
 
 it('allows the default administrator to send a test email', function () {

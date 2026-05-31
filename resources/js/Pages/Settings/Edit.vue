@@ -6,6 +6,7 @@ import { useI18n } from '@/i18n';
 
 const props = defineProps({
     settings: Object,
+    isAdmin: Boolean,
 });
 
 const { t } = useI18n();
@@ -74,16 +75,16 @@ function sendTestEmail() {
 </script>
 
 <template>
-    <Head :title="t('systemSettings')" />
+    <Head :title="t('settings')" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-100">{{ t('systemSettings') }}</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-100">{{ t('settings') }}</h2>
         </template>
 
         <div class="py-8">
             <form class="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 lg:px-8" @submit.prevent="submit">
-                <section class="rounded-lg border bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <section v-if="props.isAdmin" class="rounded-lg border bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <h3 class="mb-5 font-semibold text-gray-900 dark:text-gray-100">{{ t('generalSettings') }}</h3>
                     <div class="grid gap-4 md:grid-cols-2">
                         <label class="block">
