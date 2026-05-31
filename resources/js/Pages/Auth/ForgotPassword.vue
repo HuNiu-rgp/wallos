@@ -19,7 +19,7 @@ const form = useForm({
 const { t } = useI18n();
 
 const submit = () => {
-    form.post(route('password.email'));
+    form.post(route('password.email', undefined, false));
 };
 </script>
 

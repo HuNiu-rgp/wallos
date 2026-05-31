@@ -259,7 +259,7 @@ async function fetchLogoFromLink() {
     form.clearErrors('link_url');
 
     try {
-        const response = await window.axios.post(route('subscriptions.fetch-logo'), {
+        const response = await window.axios.post(route('subscriptions.fetch-logo', undefined, false), {
             url: form.link_url,
         });
 
@@ -311,7 +311,7 @@ function submit() {
         notification_enabled: data.notification_enabled ? 1 : 0,
         is_active: data.is_active ? 1 : 0,
         remove_logo: data.remove_logo ? 1 : 0,
-    })).post(editing.value ? route('subscriptions.update', editing.value) : route('subscriptions.store'), {
+    })).post(editing.value ? route('subscriptions.update', editing.value, false) : route('subscriptions.store', undefined, false), {
         onSuccess: () => {
             showModal.value = false;
             reset();
@@ -320,7 +320,7 @@ function submit() {
 }
 
 function destroy(item) {
-    router.delete(route('subscriptions.destroy', item.id));
+    router.delete(route('subscriptions.destroy', item.id, false));
 }
 
 function openImport() {
@@ -333,7 +333,7 @@ function importSubscriptions(event) {
     if (!file) return;
 
     importForm.file = file;
-    importForm.post(route('subscriptions.import'), {
+    importForm.post(route('subscriptions.import', undefined, false), {
         forceFormData: true,
         onFinish: () => {
             importForm.reset();
@@ -356,7 +356,7 @@ function importSubscriptions(event) {
                         <AppIcon name="upload" />
                         {{ t('importSubscriptions') }}
                     </button>
-                    <a :href="route('subscriptions.export')" class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                    <a :href="route('subscriptions.export', undefined, false)" class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
                         <AppIcon name="download" />
                         {{ t('exportSubscriptions') }}
                     </a>

@@ -25,13 +25,17 @@ COPY . .
 COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/wallos-entrypoint
 COPY docker/nginx.conf /etc/nginx/sites-available/default
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction \
+RUN mkdir -p data database \
+    && touch database/database.sqlite \
+    && composer install --no-dev --optimize-autoloader --no-interaction \
     && npm ci \
     && npm run build \
     && rm -f public/hot \
     && rm -rf node_modules \
+    && rm -f database/*.sqlite* database/.app-key data/*.sqlite* data/.app-key \
     && printf '%s\n' 'clear_env = no' > /usr/local/etc/php-fpm.d/zz-wallos.conf \
     && mkdir -p \
+        data \
         database \
         storage/app/public \
         storage/framework/cache/data \

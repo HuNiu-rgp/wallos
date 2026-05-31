@@ -69,7 +69,7 @@ docker compose --env-file .env.docker up -d
 
 首次登录后请修改默认密码。
 
-SQLite 数据库、自动生成的应用密钥和存储文件都会保存在 Docker 数据卷中。重启或升级容器不会重置数据，也不会恢复管理员默认密码。
+SQLite 数据库、自动生成的应用密钥和存储文件都会保存在宿主机目录中。重启或升级容器不会重置数据，也不会恢复管理员默认密码。
 
 ### 配置
 
@@ -77,10 +77,19 @@ SQLite 数据库、自动生成的应用密钥和存储文件都会保存在 Doc
 
 ```dotenv
 WALLOS_PORT=8001
+WALLOS_DATA_PATH=./data
+WALLOS_STORAGE_PATH=./storage
 APP_URL=http://localhost:8001
 ASSET_URL=http://localhost:8001
 TRUSTED_PROXIES=*
 TZ=Asia/Shanghai
+```
+
+如果项目文件放在 `/www/wwwroot/wallos`，默认的相对路径会将数据保存在 `/www/wwwroot/wallos/data` 和 `/www/wwwroot/wallos/storage`。也可以显式填写绝对路径：
+
+```dotenv
+WALLOS_DATA_PATH=/www/wwwroot/wallos/data
+WALLOS_STORAGE_PATH=/www/wwwroot/wallos/storage
 ```
 
 再次运行安装脚本会更新 `docker-compose.yml`，但不会覆盖已经存在的 `.env.docker`。
@@ -101,14 +110,18 @@ docker compose --env-file .env.docker pull
 docker compose --env-file .env.docker up -d --force-recreate
 ```
 
+`v1.0.9` 之前的镜像可能会将本机 SQLite 文件复制到新建的 Docker 数据卷中。如果全新部署里出现了不应该存在的数据，可以停止容器，删除配置目录中的数据库文件，然后重新创建容器。以下命令会永久删除当前部署数据：
+
+```bash
+docker compose --env-file .env.docker down
+rm -f ./data/database.sqlite ./data/.app-key
+docker compose --env-file .env.docker up -d --pull always
+```
+
 ### 备份
 
 ```bash
-docker run --rm \
-  -v wallos_wallos-data:/data/database:ro \
-  -v wallos_wallos-storage:/data/storage:ro \
-  -v "$PWD":/backup \
-  alpine tar czf /backup/wallos-backup.tar.gz -C /data .
+tar czf wallos-backup.tar.gz data storage
 ```
 
 ## 本地开发
@@ -141,7 +154,7 @@ docker compose -f docker-compose.dev.yml up --build
 Docker Hub 提供适用于 `linux/amd64` 和 `linux/arm64` 的多平台镜像：
 
 ```bash
-docker pull gege188/wallos:v1.0.6
+docker pull gege188/wallos:v1.0.9
 ```
 
 生产镜像内置 Nginx 和 PHP-FPM，容器内 Nginx 监听 `80` 端口。

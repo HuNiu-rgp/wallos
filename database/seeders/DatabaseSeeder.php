@@ -17,14 +17,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::updateOrCreate([
+        $admin = User::query()->firstOrNew([
             'email' => 'admin@qq.com',
-        ], [
-            'name' => 'Admin',
-            'role' => 'admin',
-            'password' => Hash::make('123456'),
-            'email_verified_at' => now(),
         ]);
+
+        $admin->name = $admin->name ?: 'Admin';
+        $admin->role = 'admin';
+        $admin->email_verified_at = $admin->email_verified_at ?: now();
+
+        if (! $admin->exists) {
+            $admin->password = Hash::make('123456');
+        }
+
+        $admin->save();
 
         foreach (SystemSetting::defaults() as $key => $value) {
             SystemSetting::query()->firstOrCreate(['key' => $key], ['value' => $value]);

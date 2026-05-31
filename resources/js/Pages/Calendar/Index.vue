@@ -70,7 +70,7 @@ function changeMonth(date) {
     const month = date.format('YYYY-MM');
 
     if (month !== props.month) {
-        router.get(route('calendar'), { month }, {
+        router.get(route('calendar', undefined, false), { month }, {
             preserveScroll: true,
             preserveState: true,
         });

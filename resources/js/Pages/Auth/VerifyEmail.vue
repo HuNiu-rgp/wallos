@@ -15,7 +15,7 @@ const form = useForm({});
 const { t } = useI18n();
 
 const submit = () => {
-    form.post(route('verification.send'));
+    form.post(route('verification.send', undefined, false));
 };
 
 const verificationLinkSent = computed(
@@ -48,7 +48,7 @@ const verificationLinkSent = computed(
                 </PrimaryButton>
 
                 <Link
-                    :href="route('logout')"
+                    :href="route('logout', undefined, false)"
                     method="post"
                     as="button"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"

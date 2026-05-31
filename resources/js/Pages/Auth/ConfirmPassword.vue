@@ -13,7 +13,7 @@ const form = useForm({
 const { t } = useI18n();
 
 const submit = () => {
-    form.post(route('password.confirm'), {
+    form.post(route('password.confirm', undefined, false), {
         onFinish: () => form.reset(),
     });
 };

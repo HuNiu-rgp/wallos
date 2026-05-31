@@ -62,7 +62,7 @@ The first startup creates the SQLite database and seeds a default administrator:
 
 Change the default password after your first login.
 
-The SQLite database, generated application key, and storage files are persisted in Docker volumes. Restarting or upgrading containers does not reset your data or administrator password.
+The SQLite database, generated application key, and storage files are persisted in host directories. Restarting or upgrading containers does not reset your data or administrator password.
 
 ### Configuration
 
@@ -70,10 +70,19 @@ Edit `.env.docker` beside `docker-compose.yml` if you need to change the port, p
 
 ```dotenv
 WALLOS_PORT=8001
+WALLOS_DATA_PATH=./data
+WALLOS_STORAGE_PATH=./storage
 APP_URL=http://localhost:8001
 ASSET_URL=http://localhost:8001
 TRUSTED_PROXIES=*
 TZ=Asia/Shanghai
+```
+
+When the project files are stored in `/www/wwwroot/wallos`, the default relative paths persist data in `/www/wwwroot/wallos/data` and `/www/wwwroot/wallos/storage`. You can also set absolute paths explicitly:
+
+```dotenv
+WALLOS_DATA_PATH=/www/wwwroot/wallos/data
+WALLOS_STORAGE_PATH=/www/wwwroot/wallos/storage
 ```
 
 Running the installation script again updates `docker-compose.yml` but keeps your existing `.env.docker`.
@@ -94,14 +103,18 @@ docker compose --env-file .env.docker pull
 docker compose --env-file .env.docker up -d --force-recreate
 ```
 
+Images before `v1.0.9` could copy a local SQLite file into a newly created Docker volume. If a fresh deployment contains unexpected data, stop the containers, remove the files from the configured data directory, and recreate the containers. This permanently deletes the current deployment data:
+
+```bash
+docker compose --env-file .env.docker down
+rm -f ./data/database.sqlite ./data/.app-key
+docker compose --env-file .env.docker up -d --pull always
+```
+
 ### Backup
 
 ```bash
-docker run --rm \
-  -v wallos_wallos-data:/data/database:ro \
-  -v wallos_wallos-storage:/data/storage:ro \
-  -v "$PWD":/backup \
-  alpine tar czf /backup/wallos-backup.tar.gz -C /data .
+tar czf wallos-backup.tar.gz data storage
 ```
 
 ## Local Development
@@ -134,7 +147,7 @@ The app runs on http://localhost:8001 and Vite runs on http://localhost:5173.
 Prebuilt multi-platform images for `linux/amd64` and `linux/arm64` are published on Docker Hub:
 
 ```bash
-docker pull gege188/wallos:v1.0.6
+docker pull gege188/wallos:v1.0.9
 ```
 
 The production image runs Nginx on port `80` and PHP-FPM internally.

@@ -49,7 +49,7 @@ const navItems = [
                         <div class="flex">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
+                                <Link :href="route('dashboard', undefined, false)">
                                     <div class="flex items-center gap-2">
                                         <img
                                             v-if="$page.props.site.logoUrl"
@@ -73,7 +73,7 @@ const navItems = [
                                 <NavLink
                                     v-for="[routeName, label] in navItems"
                                     :key="routeName"
-                                    :href="route(routeName)"
+                                    :href="route(routeName, undefined, false)"
                                     :active="route().current(routeName)"
                                 >
                                     {{ t(label) }}
@@ -123,7 +123,7 @@ const navItems = [
 
                                     <template #content>
                                         <DropdownLink
-                                            :href="route('profile.edit')"
+                                            :href="route('profile.edit', undefined, false)"
                                         >
                                             <span class="flex items-center gap-2">
                                                 <AppIcon name="user" />
@@ -132,7 +132,7 @@ const navItems = [
                                         </DropdownLink>
                                         <DropdownLink
                                             v-if="$page.props.auth.isAdmin"
-                                            :href="route('settings.edit')"
+                                            :href="route('settings.edit', undefined, false)"
                                         >
                                             <span class="flex items-center gap-2">
                                                 <AppIcon name="settings" />
@@ -141,7 +141,7 @@ const navItems = [
                                         </DropdownLink>
                                         <DropdownLink
                                             v-if="$page.props.auth.isAdmin"
-                                            :href="route('users.index')"
+                                            :href="route('users.index', undefined, false)"
                                         >
                                             <span class="flex items-center gap-2">
                                                 <AppIcon name="users" />
@@ -149,7 +149,7 @@ const navItems = [
                                             </span>
                                         </DropdownLink>
                                         <DropdownLink
-                                            :href="route('logout')"
+                                            :href="route('logout', undefined, false)"
                                             method="post"
                                             as="button"
                                         >
@@ -218,7 +218,7 @@ const navItems = [
                         <ResponsiveNavLink
                             v-for="[routeName, label] in navItems"
                             :key="routeName"
-                            :href="route(routeName)"
+                            :href="route(routeName, undefined, false)"
                             :active="route().current(routeName)"
                         >
                             {{ t(label) }}
@@ -240,17 +240,17 @@ const navItems = [
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
+                            <ResponsiveNavLink :href="route('profile.edit', undefined, false)">
                                 <span class="flex items-center gap-2"><AppIcon name="user" />{{ t('profile') }}</span>
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink v-if="$page.props.auth.isAdmin" :href="route('settings.edit')">
+                            <ResponsiveNavLink v-if="$page.props.auth.isAdmin" :href="route('settings.edit', undefined, false)">
                                 <span class="flex items-center gap-2"><AppIcon name="settings" />{{ t('systemSettings') }}</span>
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink v-if="$page.props.auth.isAdmin" :href="route('users.index')">
+                            <ResponsiveNavLink v-if="$page.props.auth.isAdmin" :href="route('users.index', undefined, false)">
                                 <span class="flex items-center gap-2"><AppIcon name="users" />{{ t('userManagement') }}</span>
                             </ResponsiveNavLink>
                             <ResponsiveNavLink
-                                :href="route('logout')"
+                                :href="route('logout', undefined, false)"
                                 method="post"
                                 as="button"
                             >

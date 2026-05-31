@@ -39,16 +39,16 @@ function edit(category) {
 
 function submit() {
     if (editing.value) {
-        form.put(route('categories.update', editing.value), { onSuccess: reset });
+        form.put(route('categories.update', editing.value, false), { onSuccess: reset });
         return;
     }
 
-    form.post(route('categories.store'), { onSuccess: reset });
+    form.post(route('categories.store', undefined, false), { onSuccess: reset });
 }
 
 function destroy(category) {
     if (window.confirm(t('confirmDelete'))) {
-        router.delete(route('categories.destroy', category.id));
+        router.delete(route('categories.destroy', category.id, false));
     }
 }
 </script>

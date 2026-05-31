@@ -28,7 +28,7 @@ function moneyTotals(totals) {
         <template #header>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-100">{{ t('dashboard') }}</h2>
-                <Link :href="route('subscriptions.index')" class="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white dark:bg-indigo-600">
+                <Link :href="route('subscriptions.index', undefined, false)" class="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white dark:bg-indigo-600">
                     {{ t('createSubscription') }}
                 </Link>
             </div>

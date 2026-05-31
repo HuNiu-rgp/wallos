@@ -32,7 +32,7 @@ function submit() {
         telegram_enabled: data.telegram_enabled ? 1 : 0,
         webhook_enabled: data.webhook_enabled ? 1 : 0,
         webhook_ignore_ssl_errors: data.webhook_ignore_ssl_errors ? 1 : 0,
-    })).patch(route('settings.update'));
+    })).patch(route('settings.update', undefined, false));
 }
 
 function sendTestTelegram() {
@@ -41,7 +41,7 @@ function sendTestTelegram() {
             telegram_bot_token: form.telegram_bot_token,
             telegram_chat_id: form.telegram_chat_id,
         }))
-        .post(route('settings.test-telegram'));
+        .post(route('settings.test-telegram', undefined, false));
 }
 
 function sendTestWebhook() {
@@ -54,7 +54,7 @@ function sendTestWebhook() {
             webhook_ignore_ssl_errors: form.webhook_ignore_ssl_errors ? 1 : 0,
             webhook_secret: form.webhook_secret,
         }))
-        .post(route('settings.test-webhook'));
+        .post(route('settings.test-webhook', undefined, false));
 }
 
 function sendTestEmail() {
@@ -69,7 +69,7 @@ function sendTestEmail() {
             smtp_from_name: form.smtp_from_name,
             smtp_notification_email: form.smtp_notification_email,
         }))
-        .post(route('settings.test-email'));
+        .post(route('settings.test-email', undefined, false));
 }
 </script>
 

@@ -53,7 +53,7 @@ function edit(user) {
 
 function submit() {
     form._method = editing.value ? 'put' : '';
-    form.post(editing.value ? route('users.update', editing.value.id) : route('users.store'), {
+    form.post(editing.value ? route('users.update', editing.value.id, false) : route('users.store', undefined, false), {
         onSuccess: () => {
             showModal.value = false;
             reset();
@@ -63,7 +63,7 @@ function submit() {
 
 function destroy(user) {
     if (window.confirm(t('confirmDeleteUser'))) {
-        router.delete(route('users.destroy', user.id));
+        router.delete(route('users.destroy', user.id, false));
     }
 }
 
