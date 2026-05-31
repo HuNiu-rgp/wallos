@@ -17,17 +17,7 @@ class UserNotificationSetting extends Model
     public static function defaults(): array
     {
         return [
-            'smtp_enabled' => '0',
-            'smtp_host' => '',
-            'smtp_port' => '587',
-            'smtp_username' => '',
-            'smtp_password' => '',
-            'smtp_encryption' => 'tls',
-            'smtp_from_address' => '',
-            'smtp_from_name' => '',
             'smtp_notification_email' => '',
-            'telegram_enabled' => '0',
-            'telegram_bot_token' => '',
             'telegram_chat_id' => '',
             'webhook_enabled' => '0',
             'webhook_method' => 'POST',

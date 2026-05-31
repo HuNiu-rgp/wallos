@@ -19,6 +19,7 @@ it('sends enabled subscription reminder channels once per due date', function ()
     ]);
     $this->travelTo(now()->startOfDay());
     $subscription = createNotifiableSubscription(['next_due_on' => now()->addDays(3)->toDateString()]);
+    createProviderSettings();
     createNotificationSettings($subscription->user);
 
     expect(Artisan::call('subscriptions:notify'))->toBe(0);
@@ -47,8 +48,8 @@ it('does not notify subscriptions before their reminder window', function () {
     Mail::fake();
     $this->travelTo(now()->startOfDay());
     $subscription = createNotifiableSubscription(['next_due_on' => now()->addDays(4)->toDateString()]);
+    createProviderSettings();
     createNotificationSettings($subscription->user, [
-        'telegram_enabled' => '0',
         'webhook_enabled' => '0',
     ]);
 
@@ -64,8 +65,9 @@ it('uses notification channels belonging to the subscription owner', function ()
     $unconfiguredUser = User::factory()->create();
     createNotifiableSubscription(['user_id' => $configuredUser->id]);
     createNotifiableSubscription(['user_id' => $unconfiguredUser->id, 'name' => 'Other subscription']);
+    createProviderSettings();
     createNotificationSettings($configuredUser, [
-        'telegram_enabled' => '0',
+        'telegram_chat_id' => '',
         'webhook_enabled' => '0',
     ]);
 
@@ -96,12 +98,7 @@ function createNotificationSettings(User $user, array $overrides = []): void
 {
     $settings = [
         ...UserNotificationSetting::defaults(),
-        'smtp_enabled' => '1',
-        'smtp_host' => 'smtp.example.com',
-        'smtp_from_address' => 'mailer@example.com',
         'smtp_notification_email' => 'notify@example.com',
-        'telegram_enabled' => '1',
-        'telegram_bot_token' => 'token',
         'telegram_chat_id' => '12345',
         'webhook_enabled' => '1',
         'webhook_url' => 'https://example.com/hooks/wallos',
@@ -113,5 +110,21 @@ function createNotificationSettings(User $user, array $overrides = []): void
             ['user_id' => $user->id, 'key' => $key],
             ['value' => $value],
         );
+    }
+}
+
+function createProviderSettings(array $overrides = []): void
+{
+    $settings = [
+        'smtp_enabled' => '1',
+        'smtp_host' => 'smtp.example.com',
+        'smtp_from_address' => 'mailer@example.com',
+        'telegram_enabled' => '1',
+        'telegram_bot_token' => 'token',
+        ...$overrides,
+    ];
+
+    foreach ($settings as $key => $value) {
+        SystemSetting::query()->updateOrCreate(['key' => $key], ['value' => $value]);
     }
 }

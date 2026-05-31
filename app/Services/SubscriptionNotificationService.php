@@ -29,8 +29,8 @@ class SubscriptionNotificationService
             ->orderBy('next_due_on')
             ->each(function (Subscription $subscription) use ($settings, $today, &$result): void {
                 $notificationSettings = [
+                    ...$settings,
                     ...UserNotificationSetting::valuesFor($subscription->user),
-                    'site_name' => $settings['site_name'],
                 ];
                 $channels = $this->enabledChannels($notificationSettings);
                 $daysUntilPayment = $today->diffInDays($subscription->next_due_on->copy()->startOfDay(), false);
@@ -64,7 +64,13 @@ class SubscriptionNotificationService
     private function enabledChannels(array $settings): array
     {
         return array_values(array_filter(['email', 'telegram', 'webhook'], function (string $channel) use ($settings): bool {
-            return $settings[$channel === 'email' ? 'smtp_enabled' : $channel.'_enabled'] === '1';
+            return match ($channel) {
+                'email' => $settings['smtp_enabled'] === '1' && filled($settings['smtp_notification_email']),
+                'telegram' => $settings['telegram_enabled'] === '1'
+                    && filled($settings['telegram_bot_token'])
+                    && filled($settings['telegram_chat_id']),
+                'webhook' => $settings['webhook_enabled'] === '1' && filled($settings['webhook_url']),
+            };
         }));
     }
 

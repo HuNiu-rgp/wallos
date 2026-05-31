@@ -21,6 +21,18 @@ class SystemSetting extends Model
             'default_currency' => 'CNY',
             'default_notification_days' => '3',
             'timezone' => 'Asia/Shanghai',
+            'smtp_enabled' => '0',
+            'smtp_host' => '',
+            'smtp_port' => '587',
+            'smtp_username' => '',
+            'smtp_password' => '',
+            'smtp_encryption' => 'tls',
+            'smtp_from_address' => '',
+            'smtp_from_name' => '',
+            'telegram_enabled' => '0',
+            'telegram_bot_token' => '',
+            'telegram_bot_name' => '',
+            'telegram_webhook_secret' => '',
         ];
     }
 

@@ -6,7 +6,6 @@ import { useI18n } from '@/i18n';
 
 const props = defineProps({
     settings: Object,
-    isAdmin: Boolean,
 });
 
 const { t } = useI18n();
@@ -18,12 +17,12 @@ const form = useForm({
     registration_enabled: props.settings.registration_enabled === '1',
     smtp_enabled: props.settings.smtp_enabled === '1',
     telegram_enabled: props.settings.telegram_enabled === '1',
-    webhook_enabled: props.settings.webhook_enabled === '1',
-    webhook_ignore_ssl_errors: props.settings.webhook_ignore_ssl_errors === '1',
+    smtp_test_email: '',
+    telegram_test_chat_id: '',
 });
 const testEmailForm = useForm({});
 const testTelegramForm = useForm({});
-const testWebhookForm = useForm({});
+const registerTelegramWebhookForm = useForm({});
 
 function submit() {
     form.transform((data) => ({
@@ -31,8 +30,6 @@ function submit() {
         registration_enabled: data.registration_enabled ? 1 : 0,
         smtp_enabled: data.smtp_enabled ? 1 : 0,
         telegram_enabled: data.telegram_enabled ? 1 : 0,
-        webhook_enabled: data.webhook_enabled ? 1 : 0,
-        webhook_ignore_ssl_errors: data.webhook_ignore_ssl_errors ? 1 : 0,
     })).patch(route('settings.update', undefined, false));
 }
 
@@ -40,22 +37,9 @@ function sendTestTelegram() {
     testTelegramForm
         .transform(() => ({
             telegram_bot_token: form.telegram_bot_token,
-            telegram_chat_id: form.telegram_chat_id,
+            telegram_chat_id: form.telegram_test_chat_id,
         }))
         .post(route('settings.test-telegram', undefined, false));
-}
-
-function sendTestWebhook() {
-    testWebhookForm
-        .transform(() => ({
-            webhook_url: form.webhook_url,
-            webhook_method: form.webhook_method,
-            webhook_headers: form.webhook_headers,
-            webhook_payload: form.webhook_payload,
-            webhook_ignore_ssl_errors: form.webhook_ignore_ssl_errors ? 1 : 0,
-            webhook_secret: form.webhook_secret,
-        }))
-        .post(route('settings.test-webhook', undefined, false));
 }
 
 function sendTestEmail() {
@@ -68,9 +52,18 @@ function sendTestEmail() {
             smtp_encryption: form.smtp_encryption,
             smtp_from_address: form.smtp_from_address,
             smtp_from_name: form.smtp_from_name,
-            smtp_notification_email: form.smtp_notification_email,
+            smtp_notification_email: form.smtp_test_email,
         }))
         .post(route('settings.test-email', undefined, false));
+}
+
+function registerTelegramWebhook() {
+    registerTelegramWebhookForm
+        .transform(() => ({
+            telegram_bot_token: form.telegram_bot_token,
+            telegram_bot_name: form.telegram_bot_name,
+        }))
+        .post(route('settings.register-telegram-webhook', undefined, false));
 }
 </script>
 
@@ -84,7 +77,7 @@ function sendTestEmail() {
 
         <div class="py-8">
             <form class="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 lg:px-8" @submit.prevent="submit">
-                <section v-if="props.isAdmin" class="rounded-lg border bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <section class="rounded-lg border bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <h3 class="mb-5 font-semibold text-gray-900 dark:text-gray-100">{{ t('generalSettings') }}</h3>
                     <div class="grid gap-4 md:grid-cols-2">
                         <label class="block">
@@ -145,9 +138,9 @@ function sendTestEmail() {
                         <input v-model="form.smtp_from_address" type="email" :placeholder="t('smtpFromAddress')" class="rounded-md border-gray-300 shadow-sm" />
                         <input v-model="form.smtp_from_name" :placeholder="t('smtpFromName')" class="rounded-md border-gray-300 shadow-sm md:col-span-2" />
                         <label class="block md:col-span-2">
-                            <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('smtpNotificationEmail') }}</span>
-                            <input v-model="form.smtp_notification_email" type="email" class="w-full rounded-md border-gray-300 shadow-sm" />
-                            <InputError :message="form.errors.smtp_notification_email || testEmailForm.errors.smtp_notification_email" class="mt-1" />
+                            <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('testRecipientEmail') }}</span>
+                            <input v-model="form.smtp_test_email" type="email" class="w-full rounded-md border-gray-300 shadow-sm" />
+                            <InputError :message="testEmailForm.errors.smtp_notification_email" class="mt-1" />
                         </label>
                         <div class="flex justify-end md:col-span-2">
                             <button
@@ -174,74 +167,20 @@ function sendTestEmail() {
                     </div>
                     <div v-if="form.telegram_enabled" class="grid gap-4 md:grid-cols-2">
                         <input v-model="form.telegram_bot_token" :placeholder="t('telegramBotToken')" class="rounded-md border-gray-300 shadow-sm" />
-                        <input v-model="form.telegram_chat_id" :placeholder="t('telegramChatId')" class="rounded-md border-gray-300 shadow-sm" />
-                        <div class="flex justify-end md:col-span-2">
+                        <input v-model="form.telegram_bot_name" :placeholder="t('telegramBotName')" class="rounded-md border-gray-300 shadow-sm" />
+                        <label class="block md:col-span-2">
+                            <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('testTelegramChatId') }}</span>
+                            <input v-model="form.telegram_test_chat_id" :placeholder="t('telegramChatId')" class="w-full rounded-md border-gray-300 shadow-sm" />
+                        </label>
+                        <div class="flex flex-wrap justify-end gap-3 md:col-span-2">
+                            <button type="button" class="rounded-md border border-indigo-600 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:bg-gray-900 dark:text-indigo-300 dark:hover:bg-gray-800" :disabled="registerTelegramWebhookForm.processing" @click="registerTelegramWebhook">
+                                {{ t('registerTelegramWebhook') }}
+                            </button>
                             <button type="button" class="rounded-md border border-indigo-600 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:bg-gray-900 dark:text-indigo-300 dark:hover:bg-gray-800" :disabled="testTelegramForm.processing" @click="sendTestTelegram">
                                 {{ t('sendTestTelegram') }}
                             </button>
                         </div>
-                    </div>
-                </section>
-
-                <section class="rounded-lg border bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div class="mb-5 flex items-center justify-between gap-4">
-                        <h3 class="font-semibold text-gray-900 dark:text-gray-100">{{ t('webhookSettings') }}</h3>
-                        <label class="flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-gray-200">
-                            <button type="button" class="relative h-7 w-12 rounded-full transition" :class="form.webhook_enabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-700'" @click="form.webhook_enabled = !form.webhook_enabled">
-                                <span class="absolute top-1 h-5 w-5 rounded-full bg-white transition" :class="form.webhook_enabled ? 'left-6' : 'left-1'"></span>
-                            </button>
-                            {{ form.webhook_enabled ? t('enabled') : t('disabled') }}
-                        </label>
-                    </div>
-                    <div v-if="form.webhook_enabled" class="space-y-4">
-                        <div class="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
-                            <label class="block">
-                                <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('webhookMethod') }}</span>
-                                <select v-model="form.webhook_method" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100">
-                                    <option value="POST">POST</option>
-                                    <option value="PUT">PUT</option>
-                                    <option value="PATCH">PATCH</option>
-                                </select>
-                            </label>
-                            <label class="block">
-                                <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('webhookUrl') }}</span>
-                                <input v-model="form.webhook_url" type="url" :placeholder="t('webhookUrl')" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100" />
-                            </label>
-                        </div>
-
-                        <label class="block">
-                            <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('webhookHeaders') }}</span>
-                            <textarea v-model="form.webhook_headers" rows="4" :placeholder="t('webhookHeaders')" class="w-full rounded-md border-gray-300 font-mono text-sm shadow-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"></textarea>
-                        </label>
-
-                        <label class="block">
-                            <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('webhookPayload') }}</span>
-                            <textarea v-model="form.webhook_payload" rows="11" :placeholder="t('webhookPayload')" class="w-full rounded-md border-gray-300 font-mono text-sm shadow-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"></textarea>
-                        </label>
-
-                        <label class="block">
-                            <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('webhookCancellationPayload') }}</span>
-                            <textarea v-model="form.webhook_cancellation_payload" rows="6" :placeholder="t('webhookCancellationPayload')" class="w-full rounded-md border-gray-300 font-mono text-sm shadow-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"></textarea>
-                        </label>
-
-                        <label class="block">
-                            <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('webhookSecret') }}</span>
-                            <input v-model="form.webhook_secret" type="password" :placeholder="t('webhookSecret')" class="w-full rounded-md border-gray-300 shadow-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100" />
-                        </label>
-
-                        <div class="flex flex-col gap-4 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
-                            <label class="flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                <button type="button" class="relative h-7 w-12 rounded-full transition" :class="form.webhook_ignore_ssl_errors ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-700'" @click="form.webhook_ignore_ssl_errors = !form.webhook_ignore_ssl_errors">
-                                    <span class="absolute top-1 h-5 w-5 rounded-full bg-white transition" :class="form.webhook_ignore_ssl_errors ? 'left-6' : 'left-1'"></span>
-                                </button>
-                                {{ t('webhookIgnoreSslErrors') }}
-                            </label>
-                            <button type="button" class="self-start rounded-md border border-indigo-600 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 sm:self-auto dark:bg-gray-900 dark:text-indigo-300 dark:hover:bg-gray-800" :disabled="testWebhookForm.processing" @click="sendTestWebhook">
-                                {{ t('sendTestWebhook') }}
-                            </button>
-                        </div>
-
-                        <p class="rounded-md bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500 dark:bg-gray-800 dark:text-gray-400">{{ t('webhookVariables') }}</p>
+                        <p class="text-xs leading-5 text-gray-500 md:col-span-2 dark:text-gray-400">{{ t('telegramWebhookHint') }}</p>
                     </div>
                 </section>
 

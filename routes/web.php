@@ -4,8 +4,10 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProfileNotificationSettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SystemSettingController;
+use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\UserController;
 use App\Models\SystemSetting;
 use Illuminate\Foundation\Application;
@@ -23,6 +25,7 @@ Route::get('/', function () {
 
 Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 Route::get('/calendar', CalendarController::class)->middleware('auth')->name('calendar');
+Route::post('/telegram/webhook', TelegramWebhookController::class)->name('telegram.webhook');
 
 Route::middleware('auth')->group(function () {
     Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -34,12 +37,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::patch('/profile/notifications', [ProfileNotificationSettingController::class, 'update'])->name('profile.notifications.update');
+    Route::post('/profile/notifications/test-email', [ProfileNotificationSettingController::class, 'testEmail'])->name('profile.notifications.test-email');
+    Route::post('/profile/notifications/test-telegram', [ProfileNotificationSettingController::class, 'testTelegram'])->name('profile.notifications.test-telegram');
+    Route::post('/profile/notifications/test-webhook', [ProfileNotificationSettingController::class, 'testWebhook'])->name('profile.notifications.test-webhook');
 
     Route::get('/settings', [SystemSettingController::class, 'edit'])->name('settings.edit');
     Route::patch('/settings', [SystemSettingController::class, 'update'])->name('settings.update');
     Route::post('/settings/test-email', [SystemSettingController::class, 'testEmail'])->name('settings.test-email');
     Route::post('/settings/test-telegram', [SystemSettingController::class, 'testTelegram'])->name('settings.test-telegram');
-    Route::post('/settings/test-webhook', [SystemSettingController::class, 'testWebhook'])->name('settings.test-webhook');
+    Route::post('/settings/register-telegram-webhook', [SystemSettingController::class, 'registerTelegramWebhook'])->name('settings.register-telegram-webhook');
 
     Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
 });

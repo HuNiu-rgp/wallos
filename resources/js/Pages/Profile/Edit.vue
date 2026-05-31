@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
+import UpdateNotificationSettingsForm from './Partials/UpdateNotificationSettingsForm.vue';
 import { Head } from '@inertiajs/vue3';
 import { useI18n } from '@/i18n';
 
@@ -13,6 +14,8 @@ defineProps({
     status: {
         type: String,
     },
+    notificationSettings: Object,
+    notificationChannels: Object,
 });
 const { t } = useI18n();
 </script>
@@ -41,6 +44,14 @@ const { t } = useI18n();
 
                 <div class="bg-white p-4 shadow dark:bg-gray-900 sm:rounded-lg sm:p-8">
                     <UpdatePasswordForm class="max-w-xl" />
+                </div>
+
+                <div class="bg-white p-4 shadow dark:bg-gray-900 sm:rounded-lg sm:p-8">
+                    <UpdateNotificationSettingsForm
+                        :settings="notificationSettings"
+                        :channels="notificationChannels"
+                        class="max-w-3xl"
+                    />
                 </div>
 
                 <div class="bg-white p-4 shadow dark:bg-gray-900 sm:rounded-lg sm:p-8">

@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\SystemSetting;
-use App\Models\UserNotificationSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -16,26 +16,24 @@ class SystemSettingController extends Controller
 {
     public function edit(Request $request): Response
     {
+        $this->authorizeAdmin($request);
+
         return Inertia::render('Settings/Edit', [
-            'settings' => [
-                ...SystemSetting::values(),
-                ...UserNotificationSetting::valuesFor($request->user()),
-            ],
-            'isAdmin' => $request->user()->isAdmin(),
+            'settings' => SystemSetting::values(),
         ]);
     }
 
     public function update(Request $request): RedirectResponse
     {
-        $globalRules = [
+        $this->authorizeAdmin($request);
+
+        $validated = $request->validate([
             'site_name' => ['required', 'string', 'max:100'],
             'site_logo_url' => ['nullable', 'string', 'max:2048'],
             'registration_enabled' => ['boolean'],
             'default_currency' => ['required', 'string', 'size:3'],
             'default_notification_days' => ['required', 'integer', 'min:0', 'max:365'],
             'timezone' => ['required', 'timezone'],
-        ];
-        $notificationRules = [
             'smtp_enabled' => ['boolean'],
             'smtp_host' => ['nullable', 'string', 'max:255'],
             'smtp_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
@@ -44,32 +42,12 @@ class SystemSettingController extends Controller
             'smtp_encryption' => ['nullable', 'in:none,tls,ssl'],
             'smtp_from_address' => ['nullable', 'email', 'max:255'],
             'smtp_from_name' => ['nullable', 'string', 'max:255'],
-            'smtp_notification_email' => ['nullable', 'email', 'max:255'],
             'telegram_enabled' => ['boolean'],
             'telegram_bot_token' => ['nullable', 'string', 'max:255'],
-            'telegram_chat_id' => ['nullable', 'string', 'max:255'],
-            'webhook_enabled' => ['boolean'],
-            'webhook_method' => ['nullable', 'in:POST,PUT,PATCH'],
-            'webhook_url' => ['nullable', 'url', 'max:2048'],
-            'webhook_headers' => ['nullable', 'json', 'max:10000'],
-            'webhook_payload' => ['nullable', 'json', 'max:20000'],
-            'webhook_cancellation_payload' => ['nullable', 'json', 'max:20000'],
-            'webhook_ignore_ssl_errors' => ['boolean'],
-            'webhook_secret' => ['nullable', 'string', 'max:255'],
-        ];
-        $validated = $request->validate([
-            ...($request->user()->isAdmin() ? $globalRules : []),
-            ...$notificationRules,
+            'telegram_bot_name' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_]+$/'],
         ]);
 
-        foreach (array_intersect_key($validated, $notificationRules) as $key => $value) {
-            UserNotificationSetting::query()->updateOrCreate(
-                ['user_id' => $request->user()->id, 'key' => $key],
-                ['value' => is_bool($value) ? ($value ? '1' : '0') : $value],
-            );
-        }
-
-        foreach (array_intersect_key($validated, $globalRules) as $key => $value) {
+        foreach ($validated as $key => $value) {
             SystemSetting::query()->updateOrCreate(
                 ['key' => $key],
                 ['value' => is_bool($value) ? ($value ? '1' : '0') : $value],
@@ -81,7 +59,11 @@ class SystemSettingController extends Controller
 
     public function testEmail(Request $request): RedirectResponse
     {
-        $validated = $request->validate($this->smtpValidationRules());
+        $this->authorizeAdmin($request);
+        $validated = $request->validate([
+            ...$this->smtpValidationRules(),
+            'smtp_notification_email' => ['required', 'email', 'max:255'],
+        ]);
 
         config([
             'mail.default' => 'smtp',
@@ -113,6 +95,7 @@ class SystemSettingController extends Controller
 
     public function testTelegram(Request $request): RedirectResponse
     {
+        $this->authorizeAdmin($request);
         $validated = $request->validate([
             'telegram_bot_token' => ['required', 'string', 'max:255'],
             'telegram_chat_id' => ['required', 'string', 'max:255'],
@@ -134,44 +117,42 @@ class SystemSettingController extends Controller
         return back()->with('success', __('Telegram test sent.'));
     }
 
-    public function testWebhook(Request $request): RedirectResponse
+    public function registerTelegramWebhook(Request $request): RedirectResponse
     {
+        $this->authorizeAdmin($request);
         $validated = $request->validate([
-            'webhook_method' => ['required', 'in:POST,PUT,PATCH'],
-            'webhook_url' => ['required', 'url', 'max:2048'],
-            'webhook_headers' => ['nullable', 'json', 'max:10000'],
-            'webhook_payload' => ['required', 'json', 'max:20000'],
-            'webhook_ignore_ssl_errors' => ['boolean'],
-            'webhook_secret' => ['nullable', 'string', 'max:255'],
+            'telegram_bot_token' => ['required', 'string', 'max:255'],
+            'telegram_bot_name' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9_]+$/'],
         ]);
-        $payload = json_decode($validated['webhook_payload'], true);
-        $requestBuilder = Http::timeout(10);
+        $secret = Str::random(48);
+        $webhookUrl = route('telegram.webhook');
 
-        if ($validated['webhook_ignore_ssl_errors'] ?? false) {
-            $requestBuilder = $requestBuilder->withoutVerifying();
-        }
-
-        if ($validated['webhook_headers'] ?? null) {
-            $requestBuilder = $requestBuilder->withHeaders(json_decode($validated['webhook_headers'], true));
-        }
-
-        if ($validated['webhook_secret'] ?? null) {
-            $requestBuilder = $requestBuilder->withHeaders([
-                'X-Wallos-Signature' => hash_hmac('sha256', json_encode($payload), $validated['webhook_secret']),
-            ]);
-        }
+        abort_unless(str_starts_with($webhookUrl, 'https://'), 422, __('Telegram webhook requires an HTTPS APP_URL.'));
 
         try {
-            $requestBuilder->send($validated['webhook_method'], $validated['webhook_url'], [
-                'json' => $payload,
-            ])->throw();
+            Http::timeout(10)
+                ->post('https://api.telegram.org/bot'.$validated['telegram_bot_token'].'/setWebhook', [
+                    'url' => $webhookUrl,
+                    'secret_token' => $secret,
+                    'allowed_updates' => ['message'],
+                ])
+                ->throw();
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->with('error', __('Webhook test failed: :message', ['message' => $exception->getMessage()]));
+            return back()->with('error', __('Telegram webhook registration failed: :message', ['message' => $exception->getMessage()]));
         }
 
-        return back()->with('success', __('Webhook test sent.'));
+        foreach ([
+            'telegram_enabled' => '1',
+            'telegram_bot_token' => $validated['telegram_bot_token'],
+            'telegram_bot_name' => $validated['telegram_bot_name'],
+            'telegram_webhook_secret' => $secret,
+        ] as $key => $value) {
+            SystemSetting::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+        }
+
+        return back()->with('success', __('Telegram webhook registered.'));
     }
 
     private function smtpValidationRules(): array
@@ -184,7 +165,11 @@ class SystemSettingController extends Controller
             'smtp_encryption' => ['required', 'in:none,tls,ssl'],
             'smtp_from_address' => ['required', 'email', 'max:255'],
             'smtp_from_name' => ['nullable', 'string', 'max:255'],
-            'smtp_notification_email' => ['required', 'email', 'max:255'],
         ];
+    }
+
+    private function authorizeAdmin(Request $request): void
+    {
+        abort_unless($request->user()->isAdmin(), 403);
     }
 }

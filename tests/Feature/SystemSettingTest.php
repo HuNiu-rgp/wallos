@@ -2,10 +2,10 @@
 
 use App\Models\SystemSetting;
 use App\Models\User;
-use App\Models\UserNotificationSetting;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 
 it('blocks registration when disabled in system settings', function () {
     SystemSetting::query()->create([
@@ -51,21 +51,16 @@ it('allows a relative site logo path', function () {
     expect(SystemSetting::value('site_logo_url'))->toBe('/favicon.ico');
 });
 
-it('allows regular users to update only their notification settings', function () {
+it('blocks regular users from system settings', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->patch(route('settings.update'), [
-            'site_name' => 'Blocked',
-            'smtp_enabled' => true,
-            'telegram_enabled' => false,
-            'webhook_enabled' => false,
-            'webhook_method' => 'POST',
-        ])
-        ->assertRedirect();
+        ->get(route('settings.edit'))
+        ->assertForbidden();
 
-    expect(SystemSetting::value('site_name'))->toBe('Wallos');
-    expect(UserNotificationSetting::valuesFor($user)['smtp_enabled'])->toBe('1');
+    $this->actingAs($user)
+        ->patch(route('settings.update'), SystemSetting::defaults())
+        ->assertForbidden();
 });
 
 it('allows the default administrator to send a test email', function () {
@@ -123,25 +118,25 @@ it('allows the default administrator to send a telegram test message', function 
         && $request['chat_id'] === '12345');
 });
 
-it('allows the default administrator to send a signed webhook test', function () {
-    Http::fake(['https://example.com/hooks/wallos' => Http::response()]);
+it('allows the default administrator to register the telegram webhook', function () {
+    Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+    URL::forceRootUrl('https://wallos.example.com');
+    URL::forceScheme('https');
     $admin = User::factory()->create(['role' => 'admin']);
 
     $this->actingAs($admin)
-        ->post(route('settings.test-webhook'), [
-            'webhook_method' => 'PUT',
-            'webhook_url' => 'https://example.com/hooks/wallos',
-            'webhook_headers' => '{"X-Custom-Header":"wallos"}',
-            'webhook_payload' => '{"event":"wallos.test","message":"Test"}',
-            'webhook_ignore_ssl_errors' => true,
-            'webhook_secret' => 'secret',
+        ->post(route('settings.register-telegram-webhook'), [
+            'telegram_bot_token' => 'token',
+            'telegram_bot_name' => 'wallos_bot',
         ])
         ->assertRedirect()
         ->assertSessionHas('success');
 
-    Http::assertSent(fn (Request $request) => $request->url() === 'https://example.com/hooks/wallos'
-        && $request->method() === 'PUT'
-        && $request['event'] === 'wallos.test'
-        && $request->hasHeader('X-Custom-Header', 'wallos')
-        && $request->hasHeader('X-Wallos-Signature'));
+    expect(SystemSetting::value('telegram_enabled'))->toBe('1');
+    expect(SystemSetting::value('telegram_bot_name'))->toBe('wallos_bot');
+    expect(SystemSetting::value('telegram_webhook_secret'))->not->toBeEmpty();
+
+    Http::assertSent(fn (Request $request) => $request->url() === 'https://api.telegram.org/bottoken/setWebhook'
+        && $request['url'] === 'https://wallos.example.com/telegram/webhook'
+        && $request['secret_token'] === SystemSetting::value('telegram_webhook_secret'));
 });
