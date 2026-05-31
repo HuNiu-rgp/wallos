@@ -4,6 +4,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia as Assert;
 
 it('creates a subscription from the modal payload', function () {
     $user = User::factory()->create();
@@ -47,6 +48,42 @@ it('creates a subscription from the modal payload', function () {
     expect(Subscription::first()->toArray())
         ->start_on->toBe('2026-05-30')
         ->next_due_on->toBe('2026-06-30');
+});
+
+it('paginates the subscription list with 15 rows per page', function () {
+    $user = User::factory()->create();
+
+    foreach (range(1, 16) as $index) {
+        $user->subscriptions()->create([
+            'name' => 'Subscription '.$index,
+            'amount_cents' => $index * 100,
+            'currency' => 'USD',
+            'billing_interval' => 1,
+            'billing_cycle' => 'month',
+            'next_due_on' => sprintf('2026-07-%02d', $index),
+            'is_active' => true,
+        ]);
+    }
+
+    $this
+        ->actingAs($user)
+        ->get(route('subscriptions.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Subscriptions/Index')
+            ->has('subscriptions.data', 15)
+            ->where('subscriptions.current_page', 1)
+            ->where('subscriptions.per_page', 15)
+            ->where('subscriptions.total', 16));
+
+    $this
+        ->actingAs($user)
+        ->get(route('subscriptions.index', ['page' => 2]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Subscriptions/Index')
+            ->has('subscriptions.data', 1)
+            ->where('subscriptions.current_page', 2)
+            ->where('subscriptions.per_page', 15)
+            ->where('subscriptions.total', 16));
 });
 
 it('imports and exports subscriptions using the wallos json format', function () {

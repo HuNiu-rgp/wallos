@@ -21,13 +21,48 @@ class SubscriptionController extends Controller
 {
     public function index(Request $request): Response
     {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', Rule::in(['all', 'active', 'inactive'])],
+            'category' => ['nullable', 'string', 'max:32'],
+            'sort' => ['nullable', Rule::in(['next_due_on_asc', 'next_due_on_desc', 'amount_asc', 'amount_desc', 'newest'])],
+        ]);
+        $search = trim((string) ($filters['search'] ?? ''));
+        $status = $filters['status'] ?? 'all';
+        $category = $filters['category'] ?? 'all';
+        $sort = $filters['sort'] ?? 'next_due_on_asc';
+        $subscriptions = $request->user()
+            ->subscriptions()
+            ->with(['category:id,name,color'])
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query
+                        ->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('payment_method', 'like', '%'.$search.'%')
+                        ->orWhereHas('category', fn ($query) => $query->where('name', 'like', '%'.$search.'%'));
+                });
+            })
+            ->when($status === 'active', fn ($query) => $query->where('is_active', true))
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
+            ->when($category === 'none', fn ($query) => $query->whereNull('category_id'))
+            ->when(ctype_digit($category), fn ($query) => $query->where('category_id', (int) $category));
+
+        match ($sort) {
+            'next_due_on_desc' => $subscriptions->orderByDesc('next_due_on'),
+            'amount_asc' => $subscriptions->orderBy('amount_cents'),
+            'amount_desc' => $subscriptions->orderByDesc('amount_cents'),
+            'newest' => $subscriptions->latest(),
+            default => $subscriptions->orderBy('next_due_on'),
+        };
+
         return Inertia::render('Subscriptions/Index', [
-            'subscriptions' => $request->user()
-                ->subscriptions()
-                ->with(['category:id,name,color'])
-                ->orderByDesc('is_active')
-                ->orderBy('next_due_on')
-                ->get(),
+            'subscriptions' => $subscriptions->paginate(15)->withQueryString(),
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+                'category' => $category,
+                'sort' => $sort,
+            ],
             'categories' => $request->user()->categories()->where('type', 'expense')->orderBy('name')->get(['id', 'name', 'color']),
         ]);
     }

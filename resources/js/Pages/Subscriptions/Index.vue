@@ -6,14 +6,15 @@ import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { centsToAmount, money, useI18n } from '@/i18n';
 import { useTheme } from '@/theme';
 import { CalculatorOutlined, DeleteOutlined, EditOutlined, LinkOutlined, ReloadOutlined } from '@ant-design/icons-vue';
-import { Alert, Button, ConfigProvider, DatePicker, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Textarea, Tooltip, theme as antTheme } from 'ant-design-vue';
+import { Alert, Button, ConfigProvider, DatePicker, Input, InputNumber, Modal, Pagination, Popconfirm, Select, Space, Switch, Textarea, Tooltip, theme as antTheme } from 'ant-design-vue';
 import enUS from 'ant-design-vue/es/locale/en_US';
 import zhCN from 'ant-design-vue/es/locale/zh_CN';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import 'ant-design-vue/dist/reset.css';
 
 const props = defineProps({
-    subscriptions: Array,
+    subscriptions: Object,
+    filters: Object,
     categories: Array,
 });
 
@@ -24,10 +25,11 @@ const editing = ref(null);
 const showModal = ref(false);
 const logoPreview = ref(null);
 const fetchingLogo = ref(false);
-const search = ref('');
-const statusFilter = ref('all');
-const categoryFilter = ref('all');
-const sortMode = ref('next_due_on_asc');
+const search = ref(props.filters.search || '');
+const statusFilter = ref(props.filters.status || 'all');
+const categoryFilter = ref(props.filters.category || 'all');
+const sortMode = ref(props.filters.sort || 'next_due_on_asc');
+const currentPage = ref(props.subscriptions.current_page || 1);
 const importInput = ref(null);
 const importForm = useForm({
     file: null,
@@ -95,42 +97,34 @@ const antThemeConfig = computed(() => ({
         colorPrimary: '#4f46e5',
     },
 }));
-const filteredSubscriptions = computed(() => {
-    const keyword = search.value.trim().toLowerCase();
+let searchTimer;
 
-    return [...props.subscriptions]
-        .filter((item) => {
-            const matchesSearch = !keyword
-                || item.name.toLowerCase().includes(keyword)
-                || (item.payment_method || '').toLowerCase().includes(keyword)
-                || (item.category?.name || '').toLowerCase().includes(keyword);
-            const matchesStatus = statusFilter.value === 'all'
-                || (statusFilter.value === 'active' && item.is_active)
-                || (statusFilter.value === 'inactive' && !item.is_active);
-            const matchesCategory = categoryFilter.value === 'all'
-                || String(item.category_id || '') === categoryFilter.value;
+function loadSubscriptions(pageNumber = 1) {
+    router.get(route('subscriptions.index', undefined, false), {
+        search: search.value || undefined,
+        status: statusFilter.value,
+        category: categoryFilter.value,
+        sort: sortMode.value,
+        page: pageNumber,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        only: ['subscriptions', 'filters'],
+    });
+}
 
-            return matchesSearch && matchesStatus && matchesCategory;
-        })
-        .sort((first, second) => {
-            if (sortMode.value === 'next_due_on_desc') {
-                return dateSortValue(second.next_due_on) - dateSortValue(first.next_due_on);
-            }
+watch(search, () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadSubscriptions(), 250);
+});
 
-            if (sortMode.value === 'amount_asc') {
-                return first.amount_cents - second.amount_cents;
-            }
+watch([statusFilter, categoryFilter, sortMode], () => {
+    loadSubscriptions();
+});
 
-            if (sortMode.value === 'amount_desc') {
-                return second.amount_cents - first.amount_cents;
-            }
-
-            if (sortMode.value === 'newest') {
-                return dateSortValue(second.created_at) - dateSortValue(first.created_at);
-            }
-
-            return dateSortValue(first.next_due_on) - dateSortValue(second.next_due_on);
-        });
+watch(() => props.subscriptions.current_page, (pageNumber) => {
+    currentPage.value = pageNumber;
 });
 
 function reset() {
@@ -185,10 +179,6 @@ function edit(item) {
 
 function dateValue(value) {
     return value ? String(value).slice(0, 10) : '';
-}
-
-function dateSortValue(value) {
-    return value ? new Date(value).getTime() : Number.MAX_SAFE_INTEGER;
 }
 
 function dueDateClass(value) {
@@ -395,7 +385,7 @@ function importSubscriptions(event) {
                             <span class="sr-only">{{ t('category') }}</span>
                             <select v-model="categoryFilter" class="h-10 w-full rounded-md border-gray-300 bg-white text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100">
                                 <option value="all">{{ t('all') }} {{ t('categories') }}</option>
-                                <option value="">{{ t('noCategory') }}</option>
+                                <option value="none">{{ t('noCategory') }}</option>
                                 <option v-for="category in props.categories" :key="category.id" :value="String(category.id)">{{ category.name }}</option>
                             </select>
                         </label>
@@ -423,10 +413,10 @@ function importSubscriptions(event) {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                <tr v-if="!filteredSubscriptions.length">
+                                <tr v-if="!props.subscriptions.data.length">
                                     <td colspan="6" class="px-5 py-8 text-center text-gray-500 dark:text-gray-400">{{ t('noData') }}</td>
                                 </tr>
-                                <tr v-for="item in filteredSubscriptions" :key="item.id">
+                                <tr v-for="item in props.subscriptions.data" :key="item.id">
                                     <td class="px-5 py-4">
                                         <div class="flex items-center gap-3">
                                             <img v-if="item.logo_url" :src="item.logo_url" alt="" class="h-9 w-9 rounded-md object-cover" />
@@ -479,6 +469,17 @@ function importSubscriptions(event) {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                    <div v-if="props.subscriptions.total > props.subscriptions.per_page" class="flex justify-end border-t px-5 py-4 dark:border-gray-800">
+                        <ConfigProvider :locale="antLocale" :theme="antThemeConfig">
+                            <Pagination
+                                :current="currentPage"
+                                :page-size="props.subscriptions.per_page"
+                                :total="props.subscriptions.total"
+                                :show-size-changer="false"
+                                @change="loadSubscriptions"
+                            />
+                        </ConfigProvider>
                     </div>
                 </section>
             </div>

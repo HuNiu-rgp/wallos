@@ -154,23 +154,15 @@ docker compose -f docker-compose.dev.yml up --build
 Docker Hub 提供适用于 `linux/amd64` 和 `linux/arm64` 的多平台镜像：
 
 ```bash
-docker pull gege188/wallos:v1.0.10
+docker pull gege188/wallos:v1.0.11
 ```
 
 生产镜像内置 Nginx 和 PHP-FPM，容器内 Nginx 监听 `80` 端口。
 
 [Docker Hub：gege188/wallos](https://hub.docker.com/r/gege188/wallos)
 
+
 ## 定时通知
 
 Docker Compose 会启动 `scheduler` 服务。系统每天 12:00 检查即将到期的订阅，并根据系统设置发送邮件、Telegram 或 Webhook 通知。
 
-## 数据说明
-
-金额使用整数分（`amount_cents`）存储，避免浮点数计算误差。
-
-## 测试
-
-```bash
-php artisan test
-```
