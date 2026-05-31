@@ -51,5 +51,26 @@ defineProps({
             <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
             <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
         </template>
+        <template v-else-if="name === 'docs'">
+            <path d="M14 3h7v7" />
+            <path d="M10 14 21 3" />
+            <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+        </template>
+        <template v-else-if="name === 'check-circle'">
+            <circle cx="12" cy="12" r="9" />
+            <path d="m8 12 2.5 2.5L16 9" />
+        </template>
+        <template v-else-if="name === 'calendar'">
+            <path d="M8 2v4M16 2v4M3 10h18" />
+            <rect width="18" height="18" x="3" y="4" rx="2" />
+        </template>
+        <template v-else-if="name === 'wallet'">
+            <path d="M20 7V6a2 2 0 0 0-2-2H5a3 3 0 0 0 0 6h15v8a2 2 0 0 1-2 2H5a3 3 0 0 1-3-3V7" />
+            <path d="M16 14h.01" />
+        </template>
+        <template v-else-if="name === 'pause-circle'">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M10 9v6M14 9v6" />
+        </template>
     </svg>
 </template>

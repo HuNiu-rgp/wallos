@@ -131,7 +131,7 @@ function sendTestEmail() {
                             {{ form.smtp_enabled ? t('enabled') : t('disabled') }}
                         </label>
                     </div>
-                    <div class="grid gap-4 md:grid-cols-2">
+                    <div v-if="form.smtp_enabled" class="grid gap-4 md:grid-cols-2">
                         <input v-model="form.smtp_host" :placeholder="t('smtpHost')" class="rounded-md border-gray-300 shadow-sm" />
                         <input v-model="form.smtp_port" type="number" :placeholder="t('smtpPort')" class="rounded-md border-gray-300 shadow-sm" />
                         <input v-model="form.smtp_username" :placeholder="t('smtpUsername')" class="rounded-md border-gray-300 shadow-sm" />
@@ -171,7 +171,7 @@ function sendTestEmail() {
                             {{ form.telegram_enabled ? t('enabled') : t('disabled') }}
                         </label>
                     </div>
-                    <div class="grid gap-4 md:grid-cols-2">
+                    <div v-if="form.telegram_enabled" class="grid gap-4 md:grid-cols-2">
                         <input v-model="form.telegram_bot_token" :placeholder="t('telegramBotToken')" class="rounded-md border-gray-300 shadow-sm" />
                         <input v-model="form.telegram_chat_id" :placeholder="t('telegramChatId')" class="rounded-md border-gray-300 shadow-sm" />
                         <div class="flex justify-end md:col-span-2">
@@ -192,7 +192,7 @@ function sendTestEmail() {
                             {{ form.webhook_enabled ? t('enabled') : t('disabled') }}
                         </label>
                     </div>
-                    <div class="space-y-4">
+                    <div v-if="form.webhook_enabled" class="space-y-4">
                         <div class="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
                             <label class="block">
                                 <span class="mb-1 block text-sm text-gray-700 dark:text-gray-300">{{ t('webhookMethod') }}</span>

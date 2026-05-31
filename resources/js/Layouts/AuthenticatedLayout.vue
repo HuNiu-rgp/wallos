@@ -148,6 +148,17 @@ const navItems = [
                                                 {{ t('userManagement') }}
                                             </span>
                                         </DropdownLink>
+                                        <a
+                                            href="https://github.com/HuNiu-rgp/wallos"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none dark:text-gray-100 dark:hover:bg-gray-700 dark:focus:bg-gray-700"
+                                        >
+                                            <span class="flex items-center gap-2">
+                                                <AppIcon name="docs" />
+                                                {{ t('viewDocumentation') }}
+                                            </span>
+                                        </a>
                                         <DropdownLink
                                             :href="route('logout', undefined, false)"
                                             method="post"
@@ -249,6 +260,14 @@ const navItems = [
                             <ResponsiveNavLink v-if="$page.props.auth.isAdmin" :href="route('users.index', undefined, false)">
                                 <span class="flex items-center gap-2"><AppIcon name="users" />{{ t('userManagement') }}</span>
                             </ResponsiveNavLink>
+                            <a
+                                href="https://github.com/HuNiu-rgp/wallos"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="block w-full border-l-4 border-transparent py-2 pe-4 ps-3 text-start text-base font-medium text-gray-600 transition duration-150 ease-in-out hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:border-gray-300 focus:bg-gray-50 focus:text-gray-800 focus:outline-none dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                            >
+                                <span class="flex items-center gap-2"><AppIcon name="docs" />{{ t('viewDocumentation') }}</span>
+                            </a>
                             <ResponsiveNavLink
                                 :href="route('logout', undefined, false)"
                                 method="post"
