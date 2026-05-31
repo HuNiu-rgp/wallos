@@ -33,7 +33,18 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $intendedUrl = $request->session()->pull('url.intended', route('dashboard', absolute: false));
+        $appUrl = (string) config('app.url');
+
+        if (
+            str_starts_with(strtolower($appUrl), 'https://')
+            && str_starts_with(strtolower($intendedUrl), 'http://')
+            && parse_url($appUrl, PHP_URL_HOST) === parse_url($intendedUrl, PHP_URL_HOST)
+        ) {
+            $intendedUrl = preg_replace('/^http:/i', 'https:', $intendedUrl);
+        }
+
+        return redirect()->to($intendedUrl);
     }
 
     /**

@@ -154,7 +154,7 @@ docker compose -f docker-compose.dev.yml up --build
 Docker Hub 提供适用于 `linux/amd64` 和 `linux/arm64` 的多平台镜像：
 
 ```bash
-docker pull gege188/wallos:v1.0.9
+docker pull gege188/wallos:v1.0.10
 ```
 
 生产镜像内置 Nginx 和 PHP-FPM，容器内 Nginx 监听 `80` 端口。

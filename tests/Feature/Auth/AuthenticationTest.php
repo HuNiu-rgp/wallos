@@ -20,6 +20,21 @@ test('users can authenticate using the login screen', function () {
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
+test('login upgrades a same-host intended url to https when app url is secure', function () {
+    config(['app.url' => 'https://wallos.example.com']);
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->withSession(['url.intended' => 'http://wallos.example.com/dashboard'])
+        ->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+    $response->assertRedirect('https://wallos.example.com/dashboard');
+});
+
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();
 
