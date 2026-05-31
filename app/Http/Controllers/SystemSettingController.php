@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -44,8 +45,12 @@ class SystemSettingController extends Controller
             'smtp_from_name' => ['nullable', 'string', 'max:255'],
             'telegram_enabled' => ['boolean'],
             'telegram_bot_token' => ['nullable', 'string', 'max:255'],
-            'telegram_bot_name' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_]+$/'],
+            'telegram_bot_name' => ['nullable', 'string', 'max:255', 'regex:/^@?[A-Za-z0-9_]+$/'],
         ]);
+
+        if (isset($validated['telegram_bot_name'])) {
+            $validated['telegram_bot_name'] = ltrim($validated['telegram_bot_name'], '@');
+        }
 
         foreach ($validated as $key => $value) {
             SystemSetting::query()->updateOrCreate(
@@ -122,21 +127,22 @@ class SystemSettingController extends Controller
         $this->authorizeAdmin($request);
         $validated = $request->validate([
             'telegram_bot_token' => ['required', 'string', 'max:255'],
-            'telegram_bot_name' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9_]+$/'],
+            'telegram_bot_name' => ['required', 'string', 'max:255', 'regex:/^@?[A-Za-z0-9_]+$/'],
         ]);
+        $validated['telegram_bot_name'] = ltrim($validated['telegram_bot_name'], '@');
         $secret = Str::random(48);
         $webhookUrl = route('telegram.webhook');
 
         abort_unless(str_starts_with($webhookUrl, 'https://'), 422, __('Telegram webhook requires an HTTPS APP_URL.'));
 
         try {
-            Http::timeout(10)
+            $response = Http::timeout(10)
                 ->post('https://api.telegram.org/bot'.$validated['telegram_bot_token'].'/setWebhook', [
                     'url' => $webhookUrl,
                     'secret_token' => $secret,
                     'allowed_updates' => ['message'],
-                ])
-                ->throw();
+                ]);
+            $this->telegramResult($response);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -155,6 +161,33 @@ class SystemSettingController extends Controller
         return back()->with('success', __('Telegram webhook registered.'));
     }
 
+    public function telegramWebhookStatus(Request $request): RedirectResponse
+    {
+        $this->authorizeAdmin($request);
+        $validated = $request->validate([
+            'telegram_bot_token' => ['required', 'string', 'max:255'],
+        ]);
+
+        try {
+            $response = Http::timeout(10)
+                ->get('https://api.telegram.org/bot'.$validated['telegram_bot_token'].'/getWebhookInfo');
+            $status = $this->telegramResult($response);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', __('Telegram webhook status failed: :message', ['message' => $exception->getMessage()]));
+        }
+
+        $message = 'Webhook URL：'.($status['url'] ?: '未注册')
+            .'；待处理更新：'.($status['pending_update_count'] ?? 0);
+
+        if ($status['last_error_message'] ?? null) {
+            $message .= '；最近错误：'.$status['last_error_message'];
+        }
+
+        return back()->with('success', $message);
+    }
+
     private function smtpValidationRules(): array
     {
         return [
@@ -171,5 +204,17 @@ class SystemSettingController extends Controller
     private function authorizeAdmin(Request $request): void
     {
         abort_unless($request->user()->isAdmin(), 403);
+    }
+
+    private function telegramResult(\Illuminate\Http\Client\Response $response): array
+    {
+        $response->throw();
+        $payload = $response->json();
+
+        if (! ($payload['ok'] ?? false)) {
+            throw new RuntimeException($payload['description'] ?? 'Telegram API request failed.');
+        }
+
+        return is_array($payload['result'] ?? null) ? $payload['result'] : [];
     }
 }

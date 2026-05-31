@@ -23,6 +23,7 @@ const form = useForm({
 const testEmailForm = useForm({});
 const testTelegramForm = useForm({});
 const registerTelegramWebhookForm = useForm({});
+const telegramWebhookStatusForm = useForm({});
 
 function submit() {
     form.transform((data) => ({
@@ -64,6 +65,14 @@ function registerTelegramWebhook() {
             telegram_bot_name: form.telegram_bot_name,
         }))
         .post(route('settings.register-telegram-webhook', undefined, false));
+}
+
+function checkTelegramWebhookStatus() {
+    telegramWebhookStatusForm
+        .transform(() => ({
+            telegram_bot_token: form.telegram_bot_token,
+        }))
+        .post(route('settings.telegram-webhook-status', undefined, false));
 }
 </script>
 
@@ -173,6 +182,9 @@ function registerTelegramWebhook() {
                             <input v-model="form.telegram_test_chat_id" :placeholder="t('telegramChatId')" class="w-full rounded-md border-gray-300 shadow-sm" />
                         </label>
                         <div class="flex flex-wrap justify-end gap-3 md:col-span-2">
+                            <button type="button" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800" :disabled="telegramWebhookStatusForm.processing" @click="checkTelegramWebhookStatus">
+                                {{ t('checkTelegramWebhookStatus') }}
+                            </button>
                             <button type="button" class="rounded-md border border-indigo-600 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:bg-gray-900 dark:text-indigo-300 dark:hover:bg-gray-800" :disabled="registerTelegramWebhookForm.processing" @click="registerTelegramWebhook">
                                 {{ t('registerTelegramWebhook') }}
                             </button>

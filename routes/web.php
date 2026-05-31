@@ -47,6 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/test-email', [SystemSettingController::class, 'testEmail'])->name('settings.test-email');
     Route::post('/settings/test-telegram', [SystemSettingController::class, 'testTelegram'])->name('settings.test-telegram');
     Route::post('/settings/register-telegram-webhook', [SystemSettingController::class, 'registerTelegramWebhook'])->name('settings.register-telegram-webhook');
+    Route::post('/settings/telegram-webhook-status', [SystemSettingController::class, 'telegramWebhookStatus'])->name('settings.telegram-webhook-status');
 
     Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
 });

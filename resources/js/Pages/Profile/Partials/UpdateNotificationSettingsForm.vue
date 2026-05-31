@@ -73,12 +73,20 @@ function sendTestWebhook() {
             </div>
 
             <div>
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('telegramChatId') }}</label>
-                    <a v-if="channels.telegramEnabled && telegramBotLink" :href="telegramBotLink" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-300">
-                        {{ t('bindTelegramBot') }}
-                    </a>
+                <div class="mb-3 rounded-md border border-indigo-100 bg-indigo-50 px-4 py-3 dark:border-indigo-900 dark:bg-indigo-950/40">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ t('telegramBindTitle') }}</p>
+                            <p class="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-400">
+                                {{ telegramBotLink ? t('telegramBindDescription') : t('telegramBotUnavailable') }}
+                            </p>
+                        </div>
+                        <a v-if="channels.telegramEnabled && telegramBotLink" :href="telegramBotLink" target="_blank" rel="noopener noreferrer" class="shrink-0 rounded-md bg-indigo-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-indigo-500">
+                            {{ t('bindTelegramBot') }} @{{ channels.telegramBotName.replace(/^@/, '') }}
+                        </a>
+                    </div>
                 </div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('telegramChatId') }}</label>
                 <div class="mt-1 flex flex-col gap-3 sm:flex-row">
                     <input v-model="form.telegram_chat_id" class="min-w-0 flex-1 rounded-md border-gray-300 shadow-sm dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100" />
                     <button v-if="channels.telegramEnabled" type="button" class="rounded-md border border-indigo-600 px-4 py-2 text-sm font-semibold text-indigo-700 disabled:opacity-50 dark:text-indigo-300" :disabled="testTelegramForm.processing" @click="sendTestTelegram">

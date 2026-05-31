@@ -140,3 +140,37 @@ it('allows the default administrator to register the telegram webhook', function
         && $request['url'] === 'https://wallos.example.com/telegram/webhook'
         && $request['secret_token'] === SystemSetting::value('telegram_webhook_secret'));
 });
+
+it('normalizes the telegram bot username when saving settings', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    $this->actingAs($admin)
+        ->patch(route('settings.update'), [
+            ...SystemSetting::defaults(),
+            'telegram_bot_name' => '@wallos_bot',
+        ])
+        ->assertRedirect();
+
+    expect(SystemSetting::value('telegram_bot_name'))->toBe('wallos_bot');
+});
+
+it('shows the telegram webhook status and latest delivery error', function () {
+    Http::fake([
+        'api.telegram.org/*' => Http::response([
+            'ok' => true,
+            'result' => [
+                'url' => 'https://wallos.example.com/telegram/webhook',
+                'pending_update_count' => 2,
+                'last_error_message' => 'Wrong response from the webhook: 419',
+            ],
+        ]),
+    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    $this->actingAs($admin)
+        ->post(route('settings.telegram-webhook-status'), [
+            'telegram_bot_token' => 'token',
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Webhook URL：https://wallos.example.com/telegram/webhook；待处理更新：2；最近错误：Wrong response from the webhook: 419');
+});
